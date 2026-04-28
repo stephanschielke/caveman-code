@@ -47,6 +47,7 @@ import { runMigrations, showDeprecationWarnings } from "./migrations.js";
 import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
 import { ExtensionSelectorComponent } from "./modes/interactive/components/extension-selector.js";
 import { initTheme, setDetectedBackground, stopThemeWatcher } from "./modes/interactive/theme/theme.js";
+import { handleMcpCommand } from "./cli/mcp-cli.js";
 import { runOnboarding, shouldRunOnboarding } from "./onboarding/wizard.js";
 import { handleConfigCommand, handlePackageCommand } from "./package-manager-cli.js";
 import { isLocalPath } from "./utils/paths.js";
@@ -513,6 +514,11 @@ export async function main(args: string[]) {
 
 	// WS3: cave sandbox / cave debug sandbox / cave execpolicy check.
 	if (handleSandboxCommand(args)) {
+		return;
+	}
+
+	// WS2: `cave mcp <subcmd>` and `cave mcp-server`
+	if (await handleMcpCommand(args)) {
 		return;
 	}
 

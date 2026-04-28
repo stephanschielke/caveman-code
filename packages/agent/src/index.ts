@@ -4,6 +4,8 @@ export * from "./agent.js";
 export * from "./agent-loop.js";
 // Compression
 export * from "./compression/index.js";
+// MCP
+export * as mcp from "./mcp/index.js";
 // Proxy utilities
 export * from "./proxy.js";
 // Roles
