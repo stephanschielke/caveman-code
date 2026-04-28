@@ -9,8 +9,8 @@
 //
 // Reference: https://modelcontextprotocol.io/specification (2025-06)
 
-import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { Buffer } from "node:buffer";
+import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import type { McpRemoteTool, McpServerConfig, McpTransport } from "../types.js";
 
 interface JsonRpcRequest {

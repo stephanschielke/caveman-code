@@ -1,15 +1,7 @@
 // T-095..T-103
 import { describe, expect, it } from "vitest";
-import {
-	atomicEditSymbol,
-	editSymbol,
-	type AtomicWriteAdapter,
-} from "../tools/edit-symbol.js";
-import {
-	EDIT_TOOLS,
-	editToolsSchemaHash,
-	toDiffPayload,
-} from "../tools/edit-tools-registry.js";
+import { type AtomicWriteAdapter, atomicEditSymbol, editSymbol } from "../tools/edit-symbol.js";
+import { EDIT_TOOLS, editToolsSchemaHash, toDiffPayload } from "../tools/edit-tools-registry.js";
 
 describe("editSymbol", () => {
 	it("replaces a TS function body while preserving the signature line", () => {

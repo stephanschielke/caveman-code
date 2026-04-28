@@ -20,8 +20,8 @@
 
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 // Use ajv/dist/2020 for JSON Schema draft 2020-12 support (our results schema
 // declares $schema: draft/2020-12).
@@ -120,7 +120,9 @@ export function checkPassAtOneGap(input: PreflightInput): PreflightCheck {
 		if (config === "A-baseline") continue;
 		const pct = (b.pass / b.total) * 100;
 		if (basePct - pct > tolerance) {
-			offenders.push(`${config}: ${pct.toFixed(1)}% vs baseline ${basePct.toFixed(1)}% (gap ${(basePct - pct).toFixed(1)}pp)`);
+			offenders.push(
+				`${config}: ${pct.toFixed(1)}% vs baseline ${basePct.toFixed(1)}% (gap ${(basePct - pct).toFixed(1)}pp)`,
+			);
 		}
 	}
 	return {
@@ -230,13 +232,20 @@ function hashDatasets(datasetsDir: string): string {
 
 export function checkDatasetHash(input: PreflightInput, datasetsDir: string): PreflightCheck {
 	if (!input.manifest.datasetHash) {
-		return { name: "dataset hash", ok: false, detail: "manifest.datasetHash not set — run `run-all.sh` to inject it" };
+		return {
+			name: "dataset hash",
+			ok: false,
+			detail: "manifest.datasetHash not set — run `run-all.sh` to inject it",
+		};
 	}
 	const actual = hashDatasets(datasetsDir);
 	return {
 		name: "dataset hash",
 		ok: actual === input.manifest.datasetHash,
-		detail: actual === input.manifest.datasetHash ? `matches (${actual.slice(0, 12)}…)` : `mismatch: manifest=${input.manifest.datasetHash.slice(0, 12)}… actual=${actual.slice(0, 12)}…`,
+		detail:
+			actual === input.manifest.datasetHash
+				? `matches (${actual.slice(0, 12)}…)`
+				: `mismatch: manifest=${input.manifest.datasetHash.slice(0, 12)}… actual=${actual.slice(0, 12)}…`,
 	};
 }
 
@@ -253,7 +262,10 @@ export function checkCodeSha(input: PreflightInput, repoRoot: string): Preflight
 	return {
 		name: "code SHA",
 		ok: head.startsWith(input.manifest.codeSha) || input.manifest.codeSha.startsWith(head),
-		detail: head === input.manifest.codeSha ? `matches (${head.slice(0, 12)})` : `HEAD ${head.slice(0, 12)} vs manifest ${input.manifest.codeSha.slice(0, 12)}`,
+		detail:
+			head === input.manifest.codeSha
+				? `matches (${head.slice(0, 12)})`
+				: `HEAD ${head.slice(0, 12)} vs manifest ${input.manifest.codeSha.slice(0, 12)}`,
 	};
 }
 

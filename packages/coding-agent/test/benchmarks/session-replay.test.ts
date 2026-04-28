@@ -12,10 +12,10 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, it } from "vitest";
 import {
-	type WhatIfReport,
 	calculateWhatIfSavings,
 	discoverSessionFiles,
 	loadSession,
+	type WhatIfReport,
 } from "./session-replay-utils.js";
 
 // ============================================================================
@@ -26,7 +26,11 @@ import {
 const SESSIONS_BASE = join(homedir(), ".cave", "agent", "sessions");
 const ALT_SESSIONS_BASE = join(homedir(), ".pi", "agent", "sessions");
 
-const sessionsBase = existsSync(SESSIONS_BASE) ? SESSIONS_BASE : existsSync(ALT_SESSIONS_BASE) ? ALT_SESSIONS_BASE : null;
+const sessionsBase = existsSync(SESSIONS_BASE)
+	? SESSIONS_BASE
+	: existsSync(ALT_SESSIONS_BASE)
+		? ALT_SESSIONS_BASE
+		: null;
 
 const sessionFiles = sessionsBase ? discoverSessionFiles(sessionsBase, 50) : [];
 const hasSession = sessionFiles.length > 0;
@@ -95,16 +99,19 @@ afterAll(() => {
 		const compTokens = report.compression.compressedTotalTokens.toLocaleString().padStart(10);
 		const savingsPct = `${report.compression.savingsPercent.toFixed(1)}%`.padStart(9);
 		const dedupHits = String(report.dedup.dedupHits).padStart(10);
-		const netFull = report.netSavings.full !== undefined
-			? `${report.netSavings.full > 0 ? "+" : ""}${report.netSavings.full.toLocaleString()}`.padStart(10)
-			: "—".padStart(10);
+		const netFull =
+			report.netSavings.full !== undefined
+				? `${report.netSavings.full > 0 ? "+" : ""}${report.netSavings.full.toLocaleString()}`.padStart(10)
+				: "—".padStart(10);
 
-		console.log(`| ${shortId.padEnd(18)} | ${toolCalls} | ${origTokens} | ${compTokens} | ${savingsPct} | ${dedupHits} | ${netFull} |`);
+		console.log(
+			`| ${shortId.padEnd(18)} | ${toolCalls} | ${origTokens} | ${compTokens} | ${savingsPct} | ${dedupHits} | ${netFull} |`,
+		);
 
 		totalOrigTokens += report.compression.originalTotalTokens;
 		totalCompTokens += report.compression.compressedTotalTokens;
 		totalDedupSavings += report.dedup.savingsTokens;
-		totalNetFull += (report.netSavings.full ?? 0);
+		totalNetFull += report.netSavings.full ?? 0;
 	}
 
 	const totalSavingsPct = totalOrigTokens > 0 ? ((totalOrigTokens - totalCompTokens) / totalOrigTokens) * 100 : 0;
@@ -179,7 +186,7 @@ afterAll(() => {
 		console.log(`Total output tokens:     ${totalActualOutput.toLocaleString()}`);
 		console.log(`Total cache read tokens: ${totalActualCacheRead.toLocaleString()}`);
 		console.log(
-			`Compression savings as % of actual input: ~${((totalOrigTokens - totalCompTokens) / Math.max(totalActualInput, 1) * 100).toFixed(1)}%`,
+			`Compression savings as % of actual input: ~${(((totalOrigTokens - totalCompTokens) / Math.max(totalActualInput, 1)) * 100).toFixed(1)}%`,
 		);
 	}
 

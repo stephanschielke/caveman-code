@@ -1,7 +1,7 @@
 // T-063, T-064, T-065, T-070, T-071: caveman-style renderer + full-prose fallback.
 
-import type { SymbolNode } from "./symbol-graph.js";
 import type { RankedSymbol } from "./pagerank.js";
+import type { SymbolNode } from "./symbol-graph.js";
 
 export type RepoMapStyle = "caveman" | "full";
 
@@ -38,10 +38,7 @@ export function estimateRenderTokens(sym: SymbolNode, style: RepoMapStyle): numb
 	return Math.max(1, Math.ceil((sym.signature.length + sym.file.length + 12) / 4));
 }
 
-export function renderRepomap(
-	symbols: RankedSymbol[],
-	opts: RenderOptions,
-): string {
+export function renderRepomap(symbols: RankedSymbol[], opts: RenderOptions): string {
 	const lines: string[] = [];
 	// Deterministic secondary sort when scores are equal is already applied
 	// in pagerank; renderer preserves the order.

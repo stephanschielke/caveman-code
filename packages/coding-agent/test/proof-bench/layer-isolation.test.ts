@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { runLayerIsolation, aggregateByLayer } from "./layer-isolation.js";
+import { describe, expect, it } from "vitest";
+import { aggregateByLayer, runLayerIsolation } from "./layer-isolation.js";
 
 describe("layer-isolation", () => {
 	const rows = runLayerIsolation();

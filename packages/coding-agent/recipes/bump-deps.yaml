@@ -1,0 +1,15 @@
+goal: |
+  Bump all dependencies to their latest compatible versions without introducing breaking changes.
+  1. Run `npm outdated` (or the equivalent for yarn/pnpm/bun) to see what is stale.
+  2. Apply patch and minor updates automatically.
+  3. For major-version bumps, check the changelog first and only upgrade if safe.
+  4. Re-run the build and test suite to confirm nothing regressed.
+  5. Commit with a message like "chore: bump deps to latest compatible versions".
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+
+effort: low

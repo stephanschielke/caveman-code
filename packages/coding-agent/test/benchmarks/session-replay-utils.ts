@@ -8,14 +8,14 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { AssistantMessage, TextContent, ToolResultMessage, Usage } from "@cave/ai";
+import { compressStructuredOutput } from "../../src/core/cave-structured-compression.js";
 import {
-	ReadDeduplicationCache,
 	compressCaveToolOutput,
+	ReadDeduplicationCache,
 	truncateWithToolBudget,
 } from "../../src/core/cave-tool-compression.js";
-import { compressStructuredOutput } from "../../src/core/cave-structured-compression.js";
-import { buildCaveModePrompt } from "../../src/core/system-prompt.js";
 import type { FileEntry, SessionHeader, SessionMessageEntry } from "../../src/core/session-manager.js";
+import { buildCaveModePrompt } from "../../src/core/system-prompt.js";
 
 // ============================================================================
 // Types

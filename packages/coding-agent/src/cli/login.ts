@@ -113,7 +113,9 @@ function listAuthStatus(): LoginStatus[] {
 		}
 		try {
 			// AuthStorage exposes hasOAuthToken/getApiKey on cave's existing API.
-			const stored = (auth as unknown as { getStoredOAuthCredentials?: (id: string) => unknown }).getStoredOAuthCredentials?.(p);
+			const stored = (
+				auth as unknown as { getStoredOAuthCredentials?: (id: string) => unknown }
+			).getStoredOAuthCredentials?.(p);
 			if (stored) {
 				out.push({ provider: p, state: "oauth-stored", hint: "OAuth token stored" });
 				continue;

@@ -1097,7 +1097,12 @@ export class SettingsManager {
 		this.save();
 	}
 
-	getCaveModeSettings(): { enabled: boolean; intensity: "lite" | "full" | "ultra"; toolCompression: boolean; mlCompression: boolean } {
+	getCaveModeSettings(): {
+		enabled: boolean;
+		intensity: "lite" | "full" | "ultra";
+		toolCompression: boolean;
+		mlCompression: boolean;
+	} {
 		return {
 			enabled: this.getCaveModeEnabled(),
 			intensity: this.getCaveModeIntensity(),

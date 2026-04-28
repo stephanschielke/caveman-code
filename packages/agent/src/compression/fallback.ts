@@ -30,11 +30,7 @@ export interface SafeCompressResult<T> {
 	fallback?: CompressionFallbackReason;
 }
 
-export function safeCompress<T>(
-	attempt: () => T,
-	passthrough: T,
-	middleware: string,
-): SafeCompressResult<T> {
+export function safeCompress<T>(attempt: () => T, passthrough: T, middleware: string): SafeCompressResult<T> {
 	try {
 		return { result: attempt() };
 	} catch (err) {

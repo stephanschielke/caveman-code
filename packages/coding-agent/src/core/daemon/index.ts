@@ -6,8 +6,9 @@
  * here.
  */
 
+export { AttachedSession, CaveClient, type ClientOptions } from "./client.js";
 export * from "./protocol.js";
-export { type SessionStore, openStore, SqliteSessionStore } from "./store.js";
+export { createDefaultRunnerFactory } from "./runner.js";
 export {
 	type AgentRunner,
 	type DaemonHandle,
@@ -17,5 +18,4 @@ export {
 	type RunnerFactory,
 	startDaemon,
 } from "./server.js";
-export { AttachedSession, CaveClient, type ClientOptions } from "./client.js";
-export { createDefaultRunnerFactory } from "./runner.js";
+export { openStore, type SessionStore, SqliteSessionStore } from "./store.js";

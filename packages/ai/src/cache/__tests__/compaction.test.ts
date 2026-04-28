@@ -1,17 +1,7 @@
 // T-044..T-054
 import { describe, expect, it } from "vitest";
-import {
-	type CacheRetention,
-	type CacheUsageReport,
-	resolveRetention,
-	totalInputTokens,
-} from "../policy.js";
-import {
-	KeepaliveScheduler,
-	summarize,
-	trimMiddle,
-	type Turn,
-} from "../compaction.js";
+import { KeepaliveScheduler, summarize, type Turn, trimMiddle } from "../compaction.js";
+import { type CacheRetention, type CacheUsageReport, resolveRetention, totalInputTokens } from "../policy.js";
 
 describe("cache usage report (T-044, T-046)", () => {
 	it("exposes three token fields", () => {
@@ -41,9 +31,7 @@ describe("resolveRetention (T-047, T-048, T-049)", () => {
 	});
 
 	it("CLI flag overrides role default", () => {
-		expect(
-			resolveRetention({ roleDefault: "long", cliFlag: "none" }),
-		).toBe("none");
+		expect(resolveRetention({ roleDefault: "long", cliFlag: "none" })).toBe("none");
 	});
 });
 

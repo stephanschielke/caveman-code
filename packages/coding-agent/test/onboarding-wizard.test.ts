@@ -31,7 +31,10 @@ describe("WS11 onboarding wizard", () => {
 		return SettingsManager.create(projectDir, agentDir);
 	}
 
-	function makeIO(answers: string[], envKeys: Record<string, string> = {}): WizardIO & { capturedOut: () => string; remaining: () => string[] } {
+	function makeIO(
+		answers: string[],
+		envKeys: Record<string, string> = {},
+	): WizardIO & { capturedOut: () => string; remaining: () => string[] } {
 		const stdin = new PassThrough();
 		const stdout = new PassThrough();
 		const stderr = new PassThrough();

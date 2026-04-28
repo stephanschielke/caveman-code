@@ -20,7 +20,6 @@
 
 import { spawn } from "node:child_process";
 import { join } from "node:path";
-import { combineDecisions, defaultTimeoutForEvent, isBlockingEvent } from "./events.js";
 import type {
 	CaveHookEvent,
 	HookConfig,
@@ -30,6 +29,7 @@ import type {
 	HookStdin,
 	PermissionDecision,
 } from "./events.js";
+import { combineDecisions, defaultTimeoutForEvent, isBlockingEvent } from "./events.js";
 import type { MatchedHook } from "./registry.js";
 
 export interface ExecutorOptions {

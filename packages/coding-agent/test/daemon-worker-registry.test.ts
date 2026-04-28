@@ -61,12 +61,8 @@ describe("cave worker registry", () => {
 			throw new Error(`__exit__:${code ?? 0}`);
 		}) as never);
 		try {
-			await expect(
-				handleWorkerCommand(["worker", "register", "gpu-1", "--url", "http://a"]),
-			).rejects.toThrow();
-			await expect(
-				handleWorkerCommand(["worker", "register", "gpu-1", "--url", "http://b"]),
-			).rejects.toThrow();
+			await expect(handleWorkerCommand(["worker", "register", "gpu-1", "--url", "http://a"])).rejects.toThrow();
+			await expect(handleWorkerCommand(["worker", "register", "gpu-1", "--url", "http://b"])).rejects.toThrow();
 		} finally {
 			exitSpy.mockRestore();
 		}
@@ -81,12 +77,8 @@ describe("cave worker registry", () => {
 			throw new Error(`__exit__:${code ?? 0}`);
 		}) as never);
 		try {
-			await expect(
-				handleWorkerCommand(["worker", "register", "gpu-1", "--url", "http://a"]),
-			).rejects.toThrow();
-			await expect(
-				handleWorkerCommand(["worker", "register", "gpu-2", "--url", "http://b"]),
-			).rejects.toThrow();
+			await expect(handleWorkerCommand(["worker", "register", "gpu-1", "--url", "http://a"])).rejects.toThrow();
+			await expect(handleWorkerCommand(["worker", "register", "gpu-2", "--url", "http://b"])).rejects.toThrow();
 			await expect(handleWorkerCommand(["worker", "remove", "gpu-1"])).rejects.toThrow();
 		} finally {
 			exitSpy.mockRestore();

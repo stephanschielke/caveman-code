@@ -11,10 +11,10 @@
  * Cite: https://github.com/Aider-AI/aider/blob/main/aider/repomap.py
  */
 
-import { parseFileAsync, type ParsedFile } from "./parser.js";
-import { buildSymbolGraph, type SymbolGraph } from "./symbol-graph.js";
-import { pagerank, type PageRankOptions, type RankedSymbol, selectWithinBudget } from "./pagerank.js";
+import { type PageRankOptions, pagerank, type RankedSymbol, selectWithinBudget } from "./pagerank.js";
+import { type ParsedFile, parseFileAsync } from "./parser.js";
 import { estimateRenderTokens, type RepoMapStyle, renderRepomap } from "./render.js";
+import { buildSymbolGraph, type SymbolGraph } from "./symbol-graph.js";
 
 export interface ChatState {
 	/**
@@ -112,9 +112,7 @@ export async function buildRepomap(input: BuildRepomapInput): Promise<BuildRepom
 	});
 
 	// 4. Budget selection.
-	const selected = selectWithinBudget(ranked, input.tokenBudget, (sym) =>
-		estimateRenderTokens(sym, style),
-	);
+	const selected = selectWithinBudget(ranked, input.tokenBudget, (sym) => estimateRenderTokens(sym, style));
 
 	// 5. Render.
 	const rendered = renderRepomap(selected, { style, workdir });

@@ -13,11 +13,11 @@
  *   4. global default (`diff` — Aider's most-tested format)
  */
 
-import type { EditFormat, EditFormatName } from "./types.js";
-import { diffFormat, diffFencedFormat } from "./diff.js";
-import { wholeFormat } from "./whole.js";
-import { udiffFormat } from "./udiff.js";
+import { diffFencedFormat, diffFormat } from "./diff.js";
 import { editorDiffFormat, editorWholeFormat } from "./editor.js";
+import type { EditFormat, EditFormatName } from "./types.js";
+import { udiffFormat } from "./udiff.js";
+import { wholeFormat } from "./whole.js";
 
 export const ALL_EDIT_FORMATS: Record<EditFormatName, EditFormat> = {
 	whole: wholeFormat,

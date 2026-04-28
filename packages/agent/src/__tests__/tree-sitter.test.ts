@@ -1,11 +1,6 @@
 // T-032: tree-sitter integration tests
 import { describe, expect, it } from "vitest";
-import {
-	parseFile,
-	parseFileAsync,
-	languageFor,
-	treeSitter,
-} from "../repomap/parser.js";
+import { languageFor, parseFile, parseFileAsync, treeSitter } from "../repomap/parser.js";
 
 describe("parseFileAsync (regex fallback)", () => {
 	it("parses TypeScript functions and classes", async () => {
@@ -39,10 +34,7 @@ describe("parseFileAsync (regex fallback)", () => {
 	});
 
 	it("records file and line number", async () => {
-		const result = await parseFileAsync(
-			"test.ts",
-			"// comment\nfunction foo() {}",
-		);
+		const result = await parseFileAsync("test.ts", "// comment\nfunction foo() {}");
 		expect(result.symbols[0].file).toBe("test.ts");
 		expect(result.symbols[0].line).toBe(2);
 	});
@@ -51,9 +43,7 @@ describe("parseFileAsync (regex fallback)", () => {
 		const src = "function a(){}\nfunction b(){}";
 		const r1 = await parseFileAsync("f.ts", src);
 		const r2 = await parseFileAsync("f.ts", src);
-		expect(r1.symbols.map((s) => s.name)).toEqual(
-			r2.symbols.map((s) => s.name),
-		);
+		expect(r1.symbols.map((s) => s.name)).toEqual(r2.symbols.map((s) => s.name));
 	});
 });
 

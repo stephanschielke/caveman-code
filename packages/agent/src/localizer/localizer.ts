@@ -1,7 +1,7 @@
 // T-120, T-121: deterministic file→symbol→line localizer over repomap.
 
-import type { SymbolNode } from "../repomap/symbol-graph.js";
 import type { RankedSymbol } from "../repomap/pagerank.js";
+import type { SymbolNode } from "../repomap/symbol-graph.js";
 
 export interface LocalizerCandidate {
 	file: string;
@@ -57,8 +57,6 @@ export interface LocalizerFeedConfig {
  *  the existing initial context. `off` returns an empty string. */
 export function localizerFeed(candidates: LocalizerCandidate[], config: LocalizerFeedConfig): string {
 	if (config.mode === "off") return "";
-	const lines = candidates.map(
-		(c) => `${c.file}:${c.lineRange[0]} ${c.symbol} (conf=${c.confidence.toFixed(2)})`,
-	);
+	const lines = candidates.map((c) => `${c.file}:${c.lineRange[0]} ${c.symbol} (conf=${c.confidence.toFixed(2)})`);
 	return `<!-- localizer ${config.mode} -->\n${lines.join("\n")}`;
 }

@@ -18,13 +18,7 @@
  * https://github.com/Aider-AI/aider/tree/main/aider/coders
  */
 
-export type EditFormatName =
-	| "whole"
-	| "diff"
-	| "diff-fenced"
-	| "udiff"
-	| "editor-diff"
-	| "editor-whole";
+export type EditFormatName = "whole" | "diff" | "diff-fenced" | "udiff" | "editor-diff" | "editor-whole";
 
 export interface FileEdit {
 	file: string;

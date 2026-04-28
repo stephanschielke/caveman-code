@@ -10,7 +10,7 @@
 // Wire-up: `cave` constructs an `McpHub`, calls `loadConfig()`, then asks the
 // bridge for tools to register on the agent. The bridge owns all lifecycle.
 
-import { mcp as agentMcp, type AgentTool } from "@cave/agent";
+import { type AgentTool, mcp as agentMcp } from "@cave/agent";
 import { Type } from "@sinclair/typebox";
 
 type McpHub = agentMcp.McpHub;
@@ -135,8 +135,7 @@ export function buildNamespacedTool(hub: McpHub, remote: McpRemoteTool): AgentTo
 		name: remote.namespacedName,
 		label: remote.title ?? remote.namespacedName,
 		description:
-			(remote.description ?? `MCP tool ${remote.name} on server ${remote.server}.`) +
-			` (server: ${remote.server})`,
+			(remote.description ?? `MCP tool ${remote.name} on server ${remote.server}.`) + ` (server: ${remote.server})`,
 		parameters: schema,
 		execute: async (_id, args) => {
 			const result = await hub.callNamespaced(remote.namespacedName, args);

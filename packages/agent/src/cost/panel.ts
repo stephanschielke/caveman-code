@@ -24,13 +24,10 @@ export class CostPanel {
 	record(update: Partial<CostPanelState>): void {
 		if (update.sessionDollars !== undefined) this.state.sessionDollars = update.sessionDollars;
 		if (update.inputTokens !== undefined) this.state.inputTokens += update.inputTokens;
-		if (update.cachedInputTokens !== undefined)
-			this.state.cachedInputTokens += update.cachedInputTokens;
-		if (update.uncachedInputTokens !== undefined)
-			this.state.uncachedInputTokens += update.uncachedInputTokens;
+		if (update.cachedInputTokens !== undefined) this.state.cachedInputTokens += update.cachedInputTokens;
+		if (update.uncachedInputTokens !== undefined) this.state.uncachedInputTokens += update.uncachedInputTokens;
 		if (update.outputTokens !== undefined) this.state.outputTokens += update.outputTokens;
-		if (update.cachedToolResults !== undefined)
-			this.state.cachedToolResults = update.cachedToolResults;
+		if (update.cachedToolResults !== undefined) this.state.cachedToolResults = update.cachedToolResults;
 		const total = this.state.cachedInputTokens + this.state.uncachedInputTokens;
 		this.state.hitRate = total === 0 ? 0 : this.state.cachedInputTokens / total;
 	}

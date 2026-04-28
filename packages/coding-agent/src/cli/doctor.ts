@@ -13,7 +13,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { homedir, platform, release as osRelease } from "node:os";
+import { homedir, release as osRelease, platform } from "node:os";
 import { join } from "node:path";
 import { getEnvApiKey } from "@cave/ai";
 import chalk from "chalk";
@@ -319,7 +319,10 @@ function statusBadge(s: DoctorCheckStatus): string {
 
 export function formatDoctorReport(report: DoctorReport): string {
 	const lines: string[] = [];
-	lines.push(chalk.bold(`cave ${report.version}`) + chalk.dim(`  (${report.platform}/${report.arch}, kernel ${report.kernel})`));
+	lines.push(
+		chalk.bold(`cave ${report.version}`) +
+			chalk.dim(`  (${report.platform}/${report.arch}, kernel ${report.kernel})`),
+	);
 	lines.push(chalk.dim(`node ${report.node}${report.bun ? `, bun ${report.bun}` : ""}`));
 	lines.push("");
 	for (const c of report.checks) {

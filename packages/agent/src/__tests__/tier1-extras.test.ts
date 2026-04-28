@@ -1,21 +1,10 @@
 // T-078..T-082, T-112..T-117, T-118..T-130 (data-layer subset)
 import { describe, expect, it } from "vitest";
-import {
-	applyEscape,
-	type EscapeRequest,
-} from "../sandbox/types.js";
-import {
-	McpClient,
-	McpServerMissingError,
-	type McpServerConfig,
-	type ServerSurface,
-} from "../mcp/index.js";
+import { compressionFallbackEvent, safeCompress } from "../compression/fallback.js";
 import { LLMLinguaMiddleware } from "../compression/index.js";
-import {
-	compressionFallbackEvent,
-	safeCompress,
-} from "../compression/fallback.js";
 import { DEFAULT_PRICING } from "../cost/index.js";
+import { McpClient, type McpServerConfig, McpServerMissingError, type ServerSurface } from "../mcp/index.js";
+import { applyEscape, type EscapeRequest } from "../sandbox/types.js";
 
 // ─── Sandbox allow + escape (T-115, T-116) ────────────────────────────────
 
@@ -29,20 +18,12 @@ describe("sandbox.allow escape", () => {
 
 	it("escape confirmed adds path to writes allow", () => {
 		const base = { writes: ["/a"] };
-		const merged = applyEscape(
-			base,
-			{ kind: "write", path: "/b", reason: "test" },
-			() => true,
-		);
+		const merged = applyEscape(base, { kind: "write", path: "/b", reason: "test" }, () => true);
 		expect(merged.writes).toEqual(["/a", "/b"]);
 	});
 
 	it("escape confirmed enables network when requested", () => {
-		const merged = applyEscape(
-			{},
-			{ kind: "network", reason: "fetch api" },
-			() => true,
-		);
+		const merged = applyEscape({}, { kind: "network", reason: "fetch api" }, () => true);
 		expect(merged.network).toBe(true);
 	});
 });
@@ -56,34 +37,38 @@ describe("McpClient", () => {
 	];
 
 	it("loads config and exposes tools in sorted order", () => {
-		const client = new McpClient((server): ServerSurface => ({
-			name: server.name,
-			tools: [
-				{
-					name: `${server.name}-tool`,
-					description: `tool from ${server.name}`,
-					schema: {},
-					call: async () => ({ ok: true }),
-				},
-			],
-		}));
+		const client = new McpClient(
+			(server): ServerSurface => ({
+				name: server.name,
+				tools: [
+					{
+						name: `${server.name}-tool`,
+						description: `tool from ${server.name}`,
+						schema: {},
+						call: async () => ({ ok: true }),
+					},
+				],
+			}),
+		);
 		client.loadConfig(serverConfigs);
 		const tools = client.registeredTools();
 		expect(tools.map((t) => t.name)).toEqual(["fs-server-tool", "git-server-tool"]);
 	});
 
 	it("forwards tool call to registered handler", async () => {
-		const client = new McpClient((server): ServerSurface => ({
-			name: server.name,
-			tools: [
-				{
-					name: "ping",
-					description: "",
-					schema: {},
-					call: async () => "pong",
-				},
-			],
-		}));
+		const client = new McpClient(
+			(server): ServerSurface => ({
+				name: server.name,
+				tools: [
+					{
+						name: "ping",
+						description: "",
+						schema: {},
+						call: async () => "pong",
+					},
+				],
+			}),
+		);
 		client.loadConfig([{ name: "s", command: "c" }]);
 		const r = await client.forward("ping", {});
 		expect(r).toBe("pong");
@@ -92,9 +77,7 @@ describe("McpClient", () => {
 	it("throws McpServerMissingError for unknown tool", async () => {
 		const client = new McpClient();
 		client.loadConfig([]);
-		await expect(client.forward("missing", {})).rejects.toBeInstanceOf(
-			McpServerMissingError,
-		);
+		await expect(client.forward("missing", {})).rejects.toBeInstanceOf(McpServerMissingError);
 	});
 });
 
@@ -121,12 +104,7 @@ describe("compression fallback", () => {
 	});
 
 	it("compressionFallbackEvent shape is a TraceEvent", () => {
-		const ev = compressionFallbackEvent(
-			{ middleware: "llmlingua-2", cause: "model_missing" },
-			0,
-			1,
-			1_000,
-		);
+		const ev = compressionFallbackEvent({ middleware: "llmlingua-2", cause: "model_missing" }, 0, 1, 1_000);
 		expect(ev.type).toBe("compression_fallback");
 		expect(ev.seq).toBe(1);
 		expect(ev.payload).toMatchObject({ cause: "model_missing" });

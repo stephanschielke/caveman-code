@@ -10,5 +10,5 @@
  * before the v2.1 cut.
  */
 
+export { AttachedSession, CaveClient, type ClientOptions } from "./client.js";
 export * from "./protocol.js";
-export { CaveClient, AttachedSession, type ClientOptions } from "./client.js";

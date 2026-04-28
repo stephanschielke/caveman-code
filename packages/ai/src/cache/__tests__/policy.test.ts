@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	usageToCacheReport,
-	totalInputTokens,
-	resolveRetention,
-	validateLayers,
-	defaultPolicy,
-} from "../policy.js";
+import { defaultPolicy, resolveRetention, totalInputTokens, usageToCacheReport, validateLayers } from "../policy.js";
 
 describe("usageToCacheReport", () => {
 	it("converts Usage to CacheUsageReport", () => {

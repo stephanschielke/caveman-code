@@ -218,9 +218,11 @@ export async function queryTerminalBackground(
 	// 2. OSC 11 query (when we have a terminal and it's a TTY)
 	if (terminal && typeof (terminal as unknown as { queryOsc?: unknown }).queryOsc === "function") {
 		try {
-			const response = await (terminal as unknown as {
-				queryOsc: (seq: string, prefix: string, ms: number) => Promise<string | null>;
-			}).queryOsc("\x1b]11;?\x07", "\x1b]11;", Math.min(timeoutMs, 150));
+			const response = await (
+				terminal as unknown as {
+					queryOsc: (seq: string, prefix: string, ms: number) => Promise<string | null>;
+				}
+			).queryOsc("\x1b]11;?\x07", "\x1b]11;", Math.min(timeoutMs, 150));
 			if (response) {
 				const rgb = parseOsc11Response(response);
 				if (rgb) {

@@ -1,0 +1,28 @@
+goal: |
+  Prepare and execute a "{{release_type}}" release for this project.
+  1. Confirm the working tree is clean (`git status`).
+  2. Run the full test suite and fail immediately if any test fails.
+  3. Determine the next version number using semantic versioning:
+       - patch → bump Z in X.Y.Z
+       - minor → bump Y, reset Z to 0
+       - major → bump X, reset Y and Z to 0
+  4. Update the version field in package.json (and any other version manifests).
+  5. Generate or update CHANGELOG.md with entries since the last tag, grouped by type
+     (feat, fix, chore, docs, refactor).
+  6. Commit the version bump and changelog: `chore: release vX.Y.Z`.
+  7. Create an annotated git tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z"`.
+  8. Print the commands needed to push and publish (do NOT push unless confirmed).
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+
+effort: low
+
+inputs:
+  release_type:
+    description: "Semver bump type: patch, minor, or major"
+    required: false
+    default: "patch"

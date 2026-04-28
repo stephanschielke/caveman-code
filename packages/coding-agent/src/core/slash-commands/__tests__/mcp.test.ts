@@ -1,7 +1,7 @@
 // Tests for /mcp slash command handler.
 
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
-import { tmpdir, homedir } from "node:os";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { MCP_SLASH_COMMAND, parseMcpSlash, runMcpSlashCommand } from "../mcp.js";

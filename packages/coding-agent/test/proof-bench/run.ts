@@ -12,17 +12,17 @@
 
 import { execSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { arch, platform, hostname } from "node:os";
+import { arch, hostname, platform } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LIVE_CONFIGS, type LiveConfig } from "./ablation-matrix.js";
-import { runLayerIsolation } from "./layer-isolation.js";
-import { replayAllWithBaseline } from "./replay-runner.js";
-import { runLive, loadMicrobenchLite } from "./live-runner.js";
 import { runOutputEval } from "./cave-output-eval.js";
-import { auditLiveRun } from "./token-auditor.js";
+import { runLayerIsolation } from "./layer-isolation.js";
+import { loadMicrobenchLite, runLive } from "./live-runner.js";
 import { runPreflight } from "./preflight.js";
+import { replayAllWithBaseline } from "./replay-runner.js";
 import { emitResults, hashDatasets, hashManifest, type ReporterInput } from "./reporter.js";
+import { auditLiveRun } from "./token-auditor.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROOF_BENCH = __dirname;
@@ -125,7 +125,12 @@ async function main() {
 		? LIVE_CONFIGS.filter((c) => c.id === "A-baseline" || c.id === "F-cave-full")
 		: LIVE_CONFIGS;
 	const seeds = opts.smoke ? [0] : [0, 1];
-	const live: { rows: Awaited<ReturnType<typeof runLive>>["rows"]; totalCostUsd: number; abortedOnCostCap: boolean; sessionsOutDir: string } = opts.skipLive
+	const live: {
+		rows: Awaited<ReturnType<typeof runLive>>["rows"];
+		totalCostUsd: number;
+		abortedOnCostCap: boolean;
+		sessionsOutDir: string;
+	} = opts.skipLive
 		? { rows: [], totalCostUsd: 0, abortedOnCostCap: false, sessionsOutDir: join(opts.outDir, "sessions") }
 		: runLive({
 				tasks,
@@ -135,7 +140,9 @@ async function main() {
 				sessionsOutDir: join(opts.outDir, "sessions"),
 				onProgress: stderr,
 			});
-	stderr(`  → ${live.rows.length} rows; $${live.totalCostUsd.toFixed(4)} spent${live.abortedOnCostCap ? " (ABORTED ON COST CAP)" : ""}${opts.skipLive ? " (--no-live)" : ""}`);
+	stderr(
+		`  → ${live.rows.length} rows; $${live.totalCostUsd.toFixed(4)} spent${live.abortedOnCostCap ? " (ABORTED ON COST CAP)" : ""}${opts.skipLive ? " (--no-live)" : ""}`,
+	);
 
 	// 3) Replay (free, uses sessions captured in step 2)
 	stderr(`\n[3/6] replay-runner — re-pipe captured sessions`);
@@ -145,7 +152,9 @@ async function main() {
 	const uniqueSessions = Array.from(new Set(sessionPaths));
 	const { rows: replay, baselines: replayBaselines } =
 		uniqueSessions.length > 0 ? replayAllWithBaseline(uniqueSessions) : { rows: [], baselines: [] };
-	stderr(`  → ${replay.length} replay rows + ${replayBaselines.length} baselines across ${uniqueSessions.length} sessions`);
+	stderr(
+		`  → ${replay.length} replay rows + ${replayBaselines.length} baselines across ${uniqueSessions.length} sessions`,
+	);
 
 	// 4) Token audit (free, live rows only)
 	stderr(`\n[4/6] token-auditor — count_tokens recount`);
@@ -162,8 +171,18 @@ async function main() {
 					model: manifest.model,
 					apiKey,
 				});
-				liveWithAudit.push({ ...row, audit: { recount: audit.recountInputTokens, deltaPct: audit.deltaPct, withinTolerance: audit.withinTolerance, tolerancePct: audit.tolerancePct } });
-				stderr(`  ${row.config}/${row.taskId}[s${row.seed}]: cli=${row.tokens.input} recount=${audit.recountInputTokens} Δ=${audit.deltaPct.toFixed(2)}%`);
+				liveWithAudit.push({
+					...row,
+					audit: {
+						recount: audit.recountInputTokens,
+						deltaPct: audit.deltaPct,
+						withinTolerance: audit.withinTolerance,
+						tolerancePct: audit.tolerancePct,
+					},
+				});
+				stderr(
+					`  ${row.config}/${row.taskId}[s${row.seed}]: cli=${row.tokens.input} recount=${audit.recountInputTokens} Δ=${audit.deltaPct.toFixed(2)}%`,
+				);
 			} catch (e) {
 				stderr(`  audit failed for ${row.config}/${row.taskId}[s${row.seed}]: ${(e as Error).message}`);
 				liveWithAudit.push(row);
@@ -188,7 +207,9 @@ async function main() {
 		outputEvalCost = result.totalCost;
 		stderr(`  → ${outputEval.length} rows; $${outputEvalCost.toFixed(4)} spent`);
 	} else {
-		stderr(`  → skipped (${opts.smoke ? "smoke mode" : opts.skipOutputEval ? "--skip-output-eval" : "no ANTHROPIC_API_KEY"})`);
+		stderr(
+			`  → skipped (${opts.smoke ? "smoke mode" : opts.skipOutputEval ? "--skip-output-eval" : "no ANTHROPIC_API_KEY"})`,
+		);
 	}
 
 	const totalCost = live.totalCostUsd + outputEvalCost;
@@ -244,7 +265,11 @@ async function main() {
 	// Host info for the audit log
 	writeFileSync(
 		join(opts.outDir, "host.json"),
-		JSON.stringify({ hostname: hostname(), platform: platform(), arch: arch(), node: process.version, ranAt }, null, 2),
+		JSON.stringify(
+			{ hostname: hostname(), platform: platform(), arch: arch(), node: process.version, ranAt },
+			null,
+			2,
+		),
 	);
 
 	if (!preflight.passed) {
@@ -275,7 +300,9 @@ function readSessionTranscript(path: string): { messages: Array<{ role: "user" |
 	for (const line of content.split("\n")) {
 		if (!line.trim()) continue;
 		try {
-			const e = JSON.parse(line) as { message?: { role?: string; content?: Array<{ type: string; text?: string }> } };
+			const e = JSON.parse(line) as {
+				message?: { role?: string; content?: Array<{ type: string; text?: string }> };
+			};
 			const msg = e.message;
 			if (!msg) continue;
 			if (msg.role !== "user" && msg.role !== "assistant") continue;

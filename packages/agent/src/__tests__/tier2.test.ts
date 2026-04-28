@@ -1,10 +1,7 @@
 // T-118..T-130
 import { describe, expect, it } from "vitest";
 import {
-	applyReview,
-	batchDecisions,
-} from "../review/hunk-review.js";
-import {
+	type Candidate,
 	canRetryReflexion,
 	clampSummaryToTokenLimit,
 	incrementReflexion,
@@ -12,9 +9,9 @@ import {
 	localizerFeed,
 	runSubagentWithBudget,
 	verifyBestOfN,
-	type Candidate,
 } from "../localizer/index.js";
-import { parseFile, buildSymbolGraph, pagerank } from "../repomap/index.js";
+import { buildSymbolGraph, pagerank, parseFile } from "../repomap/index.js";
+import { applyReview, batchDecisions } from "../review/hunk-review.js";
 
 const src = `function cachePolicy() { return "long"; }
 function routerRoute() { return "plan"; }

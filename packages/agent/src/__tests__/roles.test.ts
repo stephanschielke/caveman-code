@@ -1,6 +1,6 @@
 // T-009, T-010
 import { describe, expect, it } from "vitest";
-import { isRole, requireRole, ROLES } from "../roles.js";
+import { isRole, ROLES, requireRole } from "../roles.js";
 
 describe("roles", () => {
 	it("defines exactly plan|edit|explore|verify", () => {

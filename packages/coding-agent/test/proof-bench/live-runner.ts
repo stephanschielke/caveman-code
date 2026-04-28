@@ -15,12 +15,22 @@
  * cost cap — aborts the run when spent exceeds the cap.
  */
 
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { execSync, spawnSync } from "node:child_process";
+import {
+	cpSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
-import { execSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { LIVE_CONFIGS, renderSettingsJson, type LiveConfig, type LiveConfigId } from "./ablation-matrix.js";
+import { LIVE_CONFIGS, type LiveConfig, type LiveConfigId, renderSettingsJson } from "./ablation-matrix.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROOF_BENCH_ROOT = __dirname;
@@ -125,7 +135,16 @@ function parseCaveJsonOutput(output: string): ParsedUsage {
 		try {
 			const event = JSON.parse(line) as {
 				type?: string;
-				message?: { role?: string; usage?: { input?: number; output?: number; cacheRead?: number; cacheWrite?: number; cost?: { total?: number } } };
+				message?: {
+					role?: string;
+					usage?: {
+						input?: number;
+						output?: number;
+						cacheRead?: number;
+						cacheWrite?: number;
+						cost?: { total?: number };
+					};
+				};
 			};
 			if (event.type === "message_end" && event.message?.role === "assistant") {
 				turns += 1;
@@ -187,12 +206,7 @@ function splitCaveBin(spec: string): { executable: string; leadingArgs: string[]
 	return { executable: parts[0], leadingArgs: parts.slice(1) };
 }
 
-function runOne(
-	task: TaskFiles,
-	config: LiveConfig,
-	seed: number,
-	opts: LiveRunnerOptions,
-): LiveRow {
+function runOne(task: TaskFiles, config: LiveConfig, seed: number, opts: LiveRunnerOptions): LiveRow {
 	const caveBinSpec = opts.caveBin ?? process.env.CAVE_BIN ?? "cave";
 	const { executable, leadingArgs } = splitCaveBin(caveBinSpec);
 	const model = opts.model ?? "claude-haiku-4-5";

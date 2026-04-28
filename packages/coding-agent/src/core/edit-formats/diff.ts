@@ -65,7 +65,10 @@ interface RawBlock {
 }
 
 /** Split `reply` into SEARCH/REPLACE blocks, ignoring surrounding fences. */
-function findBlocks(reply: string, opts: { fenced: boolean }): { blocks: RawBlock[]; warnings: string[]; prose: string } {
+function findBlocks(
+	reply: string,
+	opts: { fenced: boolean },
+): { blocks: RawBlock[]; warnings: string[]; prose: string } {
 	const blocks: RawBlock[] = [];
 	const warnings: string[] = [];
 	const proseChunks: string[] = [];

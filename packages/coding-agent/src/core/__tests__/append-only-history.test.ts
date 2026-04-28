@@ -1,10 +1,6 @@
 // T-007, T-008
 import { describe, expect, it } from "vitest";
-import {
-	AppendOnlyHistory,
-	assertPrefixUnchanged,
-	type HistoryBlock,
-} from "../append-only-history.js";
+import { AppendOnlyHistory, assertPrefixUnchanged, type HistoryBlock } from "../append-only-history.js";
 
 function seed(n: number): AppendOnlyHistory {
 	const h = new AppendOnlyHistory();
@@ -24,9 +20,7 @@ describe("AppendOnlyHistory", () => {
 
 	it("rejects non-monotonic turn index", () => {
 		const h = seed(3);
-		expect(() => h.append({ kind: "message", bytes: "x", turnIndex: 1 })).toThrow(
-			/append-only/,
-		);
+		expect(() => h.append({ kind: "message", bytes: "x", turnIndex: 1 })).toThrow(/append-only/);
 	});
 
 	it("frozen blocks resist in-place mutation", () => {

@@ -17,9 +17,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import {
-	repomap as repomapNs,
-} from "@cave/agent";
+import { repomap as repomapNs } from "@cave/agent";
 
 const { buildRepomap, dynamicMapTokens } = repomapNs;
 
@@ -173,16 +171,12 @@ function formatHelp(): string {
 	].join("\n");
 }
 
-async function showMap(
-	io: RepomapCommandIO,
-	chatState: RepomapChatState,
-): Promise<RepomapCommandResult> {
+async function showMap(io: RepomapCommandIO, chatState: RepomapChatState): Promise<RepomapCommandResult> {
 	const files = collectSourceFiles(io.cwd);
 	if (files.length === 0) {
 		return err(`repomap: no source files found under ${io.cwd}`);
 	}
-	const tokenBudget =
-		io.mapTokens ?? dynamicMapTokens({ hasFilesInChat: chatState.addedFiles.length > 0 });
+	const tokenBudget = io.mapTokens ?? dynamicMapTokens({ hasFilesInChat: chatState.addedFiles.length > 0 });
 	const result = await buildRepomap({
 		files,
 		tokenBudget,
@@ -206,10 +200,7 @@ async function showMap(
 	return ok(lines.join("\n"));
 }
 
-async function showStats(
-	io: RepomapCommandIO,
-	chatState: RepomapChatState,
-): Promise<RepomapCommandResult> {
+async function showStats(io: RepomapCommandIO, chatState: RepomapChatState): Promise<RepomapCommandResult> {
 	const files = collectSourceFiles(io.cwd);
 	if (files.length === 0) return err(`repomap: no source files found under ${io.cwd}`);
 	const result = await buildRepomap({
@@ -247,5 +238,7 @@ function addFile(
 	if (!existsSync(abs)) return err(`repomap: file not found: ${path}`);
 	const target = kind === "added" ? chatState.addedFiles : chatState.mentionedFiles;
 	if (!target.includes(path)) target.push(path);
-	return ok(`repomap: ${kind} ${path} (added=${chatState.addedFiles.length}, mentioned=${chatState.mentionedFiles.length})`);
+	return ok(
+		`repomap: ${kind} ${path} (added=${chatState.addedFiles.length}, mentioned=${chatState.mentionedFiles.length})`,
+	);
 }

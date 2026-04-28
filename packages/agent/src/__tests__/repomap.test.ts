@@ -1,11 +1,6 @@
 // T-032, T-033
 import { describe, expect, it } from "vitest";
-import {
-	isSupported,
-	languageFor,
-	parseFile,
-	SUPPORTED_LANGUAGES,
-} from "../repomap/index.js";
+import { isSupported, languageFor, parseFile, SUPPORTED_LANGUAGES } from "../repomap/index.js";
 
 describe("languageFor", () => {
 	it("classifies each supported extension", () => {
@@ -65,19 +60,13 @@ describe("parseFile", () => {
 	});
 
 	it("extracts Go function and type", () => {
-		const parsed = parseFile(
-			"a.go",
-			"func main() {}\ntype Node struct{}\nconst Pi = 3.14\n",
-		);
+		const parsed = parseFile("a.go", "func main() {}\ntype Node struct{}\nconst Pi = 3.14\n");
 		expect(parsed.language).toBe("go");
 		expect(parsed.symbols.length).toBeGreaterThanOrEqual(3);
 	});
 
 	it("extracts Rust fn, struct, trait, const", () => {
-		const parsed = parseFile(
-			"a.rs",
-			"pub fn add() {}\nstruct S;\ntrait T {}\nconst K: i32 = 1;\n",
-		);
+		const parsed = parseFile("a.rs", "pub fn add() {}\nstruct S;\ntrait T {}\nconst K: i32 = 1;\n");
 		expect(parsed.language).toBe("rs");
 		expect(parsed.symbols.length).toBeGreaterThanOrEqual(4);
 	});

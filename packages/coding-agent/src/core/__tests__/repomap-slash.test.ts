@@ -1,32 +1,22 @@
 // WS8: /repomap slash command — functional test on a temp dir.
 
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-	collectSourceFiles,
-	emptyChatState,
-	runRepomapCommand,
-} from "../slash-commands/repomap.js";
+import { collectSourceFiles, emptyChatState, runRepomapCommand } from "../slash-commands/repomap.js";
 
 let tmp: string;
 
 beforeAll(() => {
 	tmp = mkdtempSync(join(tmpdir(), "cave-repomap-test-"));
 	mkdirSync(join(tmp, "src"), { recursive: true });
-	writeFileSync(
-		join(tmp, "src", "foo.ts"),
-		`export function foo() {\n  return bar();\n}\nexport class Foo {}\n`,
-	);
+	writeFileSync(join(tmp, "src", "foo.ts"), `export function foo() {\n  return bar();\n}\nexport class Foo {}\n`);
 	writeFileSync(
 		join(tmp, "src", "bar.ts"),
 		`export function bar() { return 1; }\nexport function bar2() { return foo(); }\n`,
 	);
-	writeFileSync(
-		join(tmp, "src", "baz.py"),
-		`def baz():\n    return 0\nclass Baz:\n    pass\n`,
-	);
+	writeFileSync(join(tmp, "src", "baz.py"), `def baz():\n    return 0\nclass Baz:\n    pass\n`);
 	// Should be ignored (irrelevant extension):
 	writeFileSync(join(tmp, "README.md"), "# hello");
 	// Should be ignored (excluded dir):

@@ -19,11 +19,11 @@
  * own grading.
  */
 
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 import type { CaveModeSettings } from "../../src/core/settings-manager.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -88,7 +88,10 @@ function intensityToCaveModeSettings(intensity: Intensity): CaveModeSettings {
 
 function makeAgentDir(intensity: Intensity, promptId: string, seed: number): string {
 	const dir = mkdtempSync(join(tmpdir(), `proof-oeval-${promptId}-${intensity}-s${seed}-`));
-	writeFileSync(join(dir, "settings.json"), JSON.stringify({ caveMode: intensityToCaveModeSettings(intensity) }, null, 2));
+	writeFileSync(
+		join(dir, "settings.json"),
+		JSON.stringify({ caveMode: intensityToCaveModeSettings(intensity) }, null, 2),
+	);
 	return dir;
 }
 
@@ -97,7 +100,13 @@ function splitCaveBin(spec: string): { executable: string; leadingArgs: string[]
 	return { executable: parts[0], leadingArgs: parts.slice(1) };
 }
 
-export function generateOne(prompt: OutputPrompt, intensity: Intensity, seed: number, caveBin?: string, model?: string): GenerationResult {
+export function generateOne(
+	prompt: OutputPrompt,
+	intensity: Intensity,
+	seed: number,
+	caveBin?: string,
+	model?: string,
+): GenerationResult {
 	const binSpec = caveBin ?? process.env.CAVE_BIN ?? "cave";
 	const { executable, leadingArgs } = splitCaveBin(binSpec);
 	const mdl = model ?? DEFAULT_MODEL;
@@ -195,7 +204,12 @@ ${candidate || "<empty response>"}
 Evaluate the candidate per the rubric. Return JSON only.`;
 }
 
-async function callJudgeOnce(prompt: OutputPrompt, candidate: string, apiKey: string, model: string): Promise<QualityJudgeScore> {
+async function callJudgeOnce(
+	prompt: OutputPrompt,
+	candidate: string,
+	apiKey: string,
+	model: string,
+): Promise<QualityJudgeScore> {
 	const resp = await fetch("https://api.anthropic.com/v1/messages", {
 		method: "POST",
 		headers: {
@@ -352,7 +366,8 @@ export async function runOutputEval(opts: OutputEvalOptions): Promise<{ rows: Ou
 			rows.push({
 				promptId: p.id,
 				intensity,
-				outputTokens: runs.length === 0 ? 0 : Math.round(runs.reduce((a, b) => a + b.outputTokens, 0) / runs.length),
+				outputTokens:
+					runs.length === 0 ? 0 : Math.round(runs.reduce((a, b) => a + b.outputTokens, 0) / runs.length),
 				qualityScore: mean,
 				judgeRuns,
 				accepted,

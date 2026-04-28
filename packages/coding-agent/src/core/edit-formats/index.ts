@@ -1,8 +1,6 @@
 // WS8: edit format public API.
-export type { EditFormat, EditFormatName, FileEdit, ParseEditsResult } from "./types.js";
-export { wholeFormat, parseWhole } from "./whole.js";
-export { diffFormat, diffFencedFormat, parseDiff, parseDiffFenced } from "./diff.js";
-export { udiffFormat, parseUdiff } from "./udiff.js";
+
+export { diffFencedFormat, diffFormat, parseDiff, parseDiffFenced } from "./diff.js";
 export { editorDiffFormat, editorWholeFormat } from "./editor.js";
 export {
 	ALL_EDIT_FORMATS,
@@ -12,3 +10,6 @@ export {
 	isValidEditFormat,
 	selectEditFormatFor,
 } from "./registry.js";
+export type { EditFormat, EditFormatName, FileEdit, ParseEditsResult } from "./types.js";
+export { parseUdiff, udiffFormat } from "./udiff.js";
+export { parseWhole, wholeFormat } from "./whole.js";

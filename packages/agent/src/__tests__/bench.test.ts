@@ -2,10 +2,10 @@
 import { describe, expect, it } from "vitest";
 import {
 	aggregateBench,
+	type BenchInstance,
 	buildTokensVsResolvedSpec,
 	requireTwoComparisonSystems,
 	runBench,
-	type BenchInstance,
 	type SystemDatapoint,
 } from "../bench/index.js";
 

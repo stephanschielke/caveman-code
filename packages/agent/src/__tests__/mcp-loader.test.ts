@@ -85,14 +85,8 @@ describe("loadMcpConfig", () => {
 
 	it("project config wins over user config on name collision", () => {
 		mkdirSync(join(home, ".cave"), { recursive: true });
-		writeFileSync(
-			join(home, ".cave", "mcp.json"),
-			JSON.stringify({ mcpServers: { both: { command: "user-cmd" } } }),
-		);
-		writeFileSync(
-			join(tmp, ".mcp.json"),
-			JSON.stringify({ mcpServers: { both: { command: "project-cmd" } } }),
-		);
+		writeFileSync(join(home, ".cave", "mcp.json"), JSON.stringify({ mcpServers: { both: { command: "user-cmd" } } }));
+		writeFileSync(join(tmp, ".mcp.json"), JSON.stringify({ mcpServers: { both: { command: "project-cmd" } } }));
 		const result = loadMcpConfig(tmp, home);
 		expect(result.servers).toHaveLength(1);
 		expect(result.servers[0].command).toBe("project-cmd");

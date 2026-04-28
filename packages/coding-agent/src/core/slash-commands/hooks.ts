@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CAVE_HOOK_EVENTS, HooksManager, HooksRegistry, type HooksConfig } from "../hooks/index.js";
+import { CAVE_HOOK_EVENTS, type HooksConfig, HooksManager, HooksRegistry } from "../hooks/index.js";
 import type { SettingsManager } from "../settings-manager.js";
 
 export interface HooksCommandResult {

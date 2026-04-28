@@ -11,12 +11,12 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
+import { compressStructuredOutput } from "../../src/core/cave-structured-compression.js";
 import {
-	ReadDeduplicationCache,
 	compressCaveToolOutput,
+	ReadDeduplicationCache,
 	truncateWithToolBudget,
 } from "../../src/core/cave-tool-compression.js";
-import { compressStructuredOutput } from "../../src/core/cave-structured-compression.js";
 import { buildCaveModePrompt } from "../../src/core/system-prompt.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -171,7 +171,10 @@ function simulateSession(shape: SessionShape, intensity: "off" | "lite" | "full"
 
 	// Break-even: how many turns before tool savings exceed prompt overhead
 	const savingsPerTurn = shape.turns > 0 ? totalToolSavings / shape.turns : 0;
-	const breakEvenTurns = savingsPerTurn > promptOverheadPerCall ? Math.ceil(promptOverheadPerCall / (savingsPerTurn - promptOverheadPerCall)) + 1 : Infinity;
+	const breakEvenTurns =
+		savingsPerTurn > promptOverheadPerCall
+			? Math.ceil(promptOverheadPerCall / (savingsPerTurn - promptOverheadPerCall)) + 1
+			: Infinity;
 
 	return {
 		intensity,
@@ -330,9 +333,10 @@ afterAll(() => {
 		for (const result of results) {
 			if (result.intensity === "off") continue;
 			const savedDollars = result.netSavings * inputPricePerToken;
-			const pct = off.totalToolOutputOriginal > 0
-				? ((result.totalToolSavings / off.totalToolOutputOriginal) * 100).toFixed(1)
-				: "0";
+			const pct =
+				off.totalToolOutputOriginal > 0
+					? ((result.totalToolSavings / off.totalToolOutputOriginal) * 100).toFixed(1)
+					: "0";
 			console.log(
 				`${result.intensity}: ${pct}% tool output compression → net ~$${savedDollars.toFixed(4)} saved per 15-turn session`,
 			);

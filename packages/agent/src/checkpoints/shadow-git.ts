@@ -5,8 +5,8 @@
 // and is orthogonal to the user's real repo (no overlap with existing
 // SessionManager / JSONL v3 schema).
 
-import { join } from "node:path";
 import { homedir } from "node:os";
+import { join } from "node:path";
 
 export interface CheckpointEntry {
 	sessionId: string;
@@ -27,13 +27,7 @@ export function shadowRepoPath(sessionId: string, home = homedir()): ShadowRepoP
 }
 
 /** Tool name classification — mutating vs read-only. Drives auto-commit. */
-const MUTATING_TOOL_NAMES = new Set([
-	"write",
-	"edit",
-	"apply_sr_diff",
-	"edit_symbol",
-	"bash",
-]);
+const MUTATING_TOOL_NAMES = new Set(["write", "edit", "apply_sr_diff", "edit_symbol", "bash"]);
 
 export function isMutatingTool(tool: string): boolean {
 	return MUTATING_TOOL_NAMES.has(tool);
@@ -47,7 +41,10 @@ export class ShadowCheckpoints {
 	private log: CheckpointLog = { entries: [] };
 	private readonly path: ShadowRepoPath;
 
-	constructor(public readonly sessionId: string, home = homedir()) {
+	constructor(
+		public readonly sessionId: string,
+		home = homedir(),
+	) {
 		this.path = shadowRepoPath(sessionId, home);
 	}
 
@@ -200,11 +197,7 @@ export function sortByRecency(rows: SessionRow[]): SessionRow[] {
 export function fuzzyFilter(rows: SessionRow[], query: string): SessionRow[] {
 	if (!query) return rows;
 	const q = query.toLowerCase();
-	return rows.filter(
-		(r) =>
-			r.sessionId.toLowerCase().includes(q) ||
-			r.title.toLowerCase().includes(q),
-	);
+	return rows.filter((r) => r.sessionId.toLowerCase().includes(q) || r.title.toLowerCase().includes(q));
 }
 
 // ─── T-109, T-110: plan mode ────────────────────────────────────────────────
@@ -249,7 +242,5 @@ export function selectGcCandidates(
 	now: number = Date.now(),
 ): CheckpointDirMetadata[] {
 	const cutoff = now - policy.retentionDays * 24 * 60 * 60 * 1000;
-	return dirs.filter(
-		(d) => d.lastModifiedMs < cutoff && d.sessionId !== policy.activeSessionId,
-	);
+	return dirs.filter((d) => d.lastModifiedMs < cutoff && d.sessionId !== policy.activeSessionId);
 }

@@ -17,14 +17,14 @@
  * MUST work unchanged.
  */
 
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync, watch, type FSWatcher } from "fs";
+import { existsSync, type FSWatcher, readdirSync, readFileSync, realpathSync, statSync, watch } from "fs";
 import ignore from "ignore";
 import { homedir } from "os";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "path";
 import { CONFIG_DIR_NAME, getAgentDir } from "../config.js";
-import { execCommand } from "./exec.js";
 import { parseFrontmatter } from "../utils/frontmatter.js";
 import type { ResourceDiagnostic } from "./diagnostics.js";
+import { execCommand } from "./exec.js";
 import { createSyntheticSourceInfo, type SourceInfo } from "./source-info.js";
 
 /** Max name length per spec */
@@ -665,7 +665,7 @@ export async function loadSkillBody(skill: Skill, ctx: SkillExpandContext): Prom
 				cwd: ctx.cwd,
 				timeoutMs: ctx.shellTimeoutMs ?? 5_000,
 				shell: skill.frontmatter?.shell as string | undefined,
-		  });
+			});
 
 	const cap = ctx.tokenCap ?? (ctx.reattach ? SKILL_REATTACH_TOKEN_CAP : SKILL_SHARED_TOKEN_BUDGET);
 	const trailer = `\n\n[…skill body truncated to ${cap} tokens to fit budget…]`;
@@ -843,7 +843,10 @@ export async function applyInlineShellPreprocessing(
 				const ok = exec.code === 0;
 				const output = (exec.stdout || "").trimEnd();
 				results.push({ command: match.command, ok, output: output || (exec.stderr || "").trimEnd() });
-				return { ...match, replacement: ok ? output : `[!${match.command} failed: ${exec.stderr.trim() || `exit ${exec.code}`}]` };
+				return {
+					...match,
+					replacement: ok ? output : `[!${match.command} failed: ${exec.stderr.trim() || `exit ${exec.code}`}]`,
+				};
 			} catch (err) {
 				const message = err instanceof Error ? err.message : String(err);
 				results.push({ command: match.command, ok: false, output: message });

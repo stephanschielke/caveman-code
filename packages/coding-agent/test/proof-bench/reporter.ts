@@ -7,14 +7,14 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Intensity, OutputEvalRow } from "./cave-output-eval.js";
 import type { LayerIsolationRow } from "./layer-isolation.js";
-import type { ReplayBaselineRow, ReplayRow } from "./replay-runner.js";
 import type { LiveRow } from "./live-runner.js";
-import type { OutputEvalRow, Intensity } from "./cave-output-eval.js";
 import type { PreflightReport } from "./preflight.js";
+import type { ReplayBaselineRow, ReplayRow } from "./replay-runner.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -32,7 +32,9 @@ export interface ReporterInput {
 		node: string;
 		caveVersion: string;
 	};
-	live: Array<LiveRow & { audit?: { recount: number; deltaPct: number; withinTolerance: boolean; tolerancePct: number } }>;
+	live: Array<
+		LiveRow & { audit?: { recount: number; deltaPct: number; withinTolerance: boolean; tolerancePct: number } }
+	>;
 	replay: ReplayRow[];
 	/** Tokens for each session when every caveman layer is on — the clean attribution baseline. */
 	replayBaselines?: ReplayBaselineRow[];
@@ -206,7 +208,9 @@ function renderResultsMd(input: ReporterInput): string {
 	lines.push(`**Code SHA:** \`${input.codeSha}\``);
 	if (input.datasetHash) lines.push(`**Dataset hash:** \`${input.datasetHash}\``);
 	lines.push(`**Ran at:** ${input.ranAt}`);
-	lines.push(`**Platform:** ${input.platform.os}/${input.platform.arch} node ${input.platform.node} cave ${input.platform.caveVersion}`);
+	lines.push(
+		`**Platform:** ${input.platform.os}/${input.platform.arch} node ${input.platform.node} cave ${input.platform.caveVersion}`,
+	);
 	lines.push(`**Cost:** $${input.costUsd.toFixed(2)} / cap $${input.costCapUsd.toFixed(2)}`);
 	lines.push(`**Preflight:** ${input.preflight.passed ? "PASSED" : "FAILED"}`);
 	lines.push("");
@@ -227,7 +231,9 @@ function renderResultsMd(input: ReporterInput): string {
 		const full = liveAgg.find((a) => a.config === "F-cave-full");
 		if (baseline && full && baseline.tokensInputMean > 0) {
 			const saved = ((baseline.tokensInputMean - full.tokensInputMean) / baseline.tokensInputMean) * 100;
-			lines.push(`> **\`F-cave-full\` vs \`A-baseline\`: ${saved.toFixed(1)}% fewer input tokens per run**, iso-quality (pass@1 ${full.passAt1.toFixed(0)}% vs ${baseline.passAt1.toFixed(0)}%).`);
+			lines.push(
+				`> **\`F-cave-full\` vs \`A-baseline\`: ${saved.toFixed(1)}% fewer input tokens per run**, iso-quality (pass@1 ${full.passAt1.toFixed(0)}% vs ${baseline.passAt1.toFixed(0)}%).`,
+			);
 			lines.push("");
 		}
 	}
@@ -237,7 +243,9 @@ function renderResultsMd(input: ReporterInput): string {
 	if (replayAttr.length === 0) {
 		lines.push("_No replay sessions available._");
 	} else {
-		lines.push("Baseline: session tokens with every caveman layer on. A layer's row shows how many tokens *reappear* when that layer alone is disabled — i.e. how much it was saving.");
+		lines.push(
+			"Baseline: session tokens with every caveman layer on. A layer's row shows how many tokens *reappear* when that layer alone is disabled — i.e. how much it was saving.",
+		);
 		lines.push("");
 		lines.push("| Layer | Mean Δ% vs all-layers-on | Sessions |");
 		lines.push("|---|---:|---:|");
@@ -319,7 +327,10 @@ function renderWaterfall(layerAggRows: Array<{ layer: string; savedPct: number }
 // Main emit
 // ---------------------------------------------------------------------------
 
-export function emitResults(input: ReporterInput, outDir: string): { md: string; jsonPath: string; waterfallPath: string } {
+export function emitResults(
+	input: ReporterInput,
+	outDir: string,
+): { md: string; jsonPath: string; waterfallPath: string } {
 	mkdirSync(outDir, { recursive: true });
 
 	const md = renderResultsMd(input);

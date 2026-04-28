@@ -61,13 +61,7 @@ export class PricingResolver {
 		return this.table[model];
 	}
 
-	estimateDollars(
-		model: string,
-		input: number,
-		cachedInput: number,
-		cacheWrite: number,
-		output: number,
-	): number {
+	estimateDollars(model: string, input: number, cachedInput: number, cacheWrite: number, output: number): number {
 		const p = this.table[model];
 		if (!p) return 0;
 		return (

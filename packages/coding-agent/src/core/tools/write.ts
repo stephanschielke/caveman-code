@@ -10,6 +10,10 @@ import { withFileMutationQueue } from "./file-mutation-queue.js";
 import { resolveToCwd } from "./path-utils.js";
 import { invalidArgText, normalizeDisplayText, replaceTabs, shortenPath, str } from "./render-utils.js";
 import { wrapToolDefinition } from "./tool-definition-wrapper.js";
+// WS17: pre-mutate snapshot hook interface (loose coupling via duck type)
+export interface PreMutateHook {
+	preToolSnapshot(tool: string, sessionId: string): Promise<unknown>;
+}
 
 const writeSchema = Type.Object({
 	path: Type.String({ description: "Path to the file to write (relative or absolute)" }),
@@ -37,6 +41,10 @@ const defaultWriteOperations: WriteOperations = {
 export interface WriteToolOptions {
 	/** Custom operations for file writing. Default: local filesystem */
 	operations?: WriteOperations;
+	/** WS17: optional pre-mutate checkpoint hook */
+	preMutateHook?: PreMutateHook;
+	/** WS17: session ID for checkpoint tagging */
+	sessionId?: string;
 }
 
 type WriteHighlightCache = {
@@ -181,6 +189,9 @@ export function createWriteToolDefinition(
 	options?: WriteToolOptions,
 ): ToolDefinition<typeof writeSchema, undefined> {
 	const ops = options?.operations ?? defaultWriteOperations;
+	// WS17: capture hook refs from options (stable reference, not re-read per call)
+	const preMutateHook = options?.preMutateHook;
+	const sessionId = options?.sessionId ?? "default";
 	return {
 		name: "write",
 		label: "write",
@@ -196,6 +207,10 @@ export function createWriteToolDefinition(
 			_onUpdate?,
 			_ctx?,
 		) {
+			// WS17: pre-mutate snapshot — fire-and-forget, never blocks the write
+			if (preMutateHook) {
+				preMutateHook.preToolSnapshot("write", sessionId).catch(() => {});
+			}
 			const absolutePath = resolveToCwd(path, cwd);
 			const dir = dirname(absolutePath);
 			return withFileMutationQueue(

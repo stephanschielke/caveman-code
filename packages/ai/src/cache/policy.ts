@@ -4,12 +4,7 @@ import type { Usage } from "../types.js";
 
 export type CacheLayer = "tools" | "system" | "project" | "messages";
 
-export const CACHE_LAYER_ORDER: readonly CacheLayer[] = [
-	"tools",
-	"system",
-	"project",
-	"messages",
-] as const;
+export const CACHE_LAYER_ORDER: readonly CacheLayer[] = ["tools", "system", "project", "messages"] as const;
 
 export type CacheRetention = "long" | "short" | "none";
 
@@ -75,9 +70,7 @@ export function validateLayers(layers: LayerBlock[]): void {
 	const order = layers.map((l) => CACHE_LAYER_ORDER.indexOf(l.layer));
 	for (let i = 1; i < order.length; i++) {
 		if (order[i] < order[i - 1]) {
-			throw new Error(
-				`cache: layers out of canonical order: ${layers.map((l) => l.layer).join(",")}`,
-			);
+			throw new Error(`cache: layers out of canonical order: ${layers.map((l) => l.layer).join(",")}`);
 		}
 	}
 	const breakpointsPerLayer = new Map<CacheLayer, number>();

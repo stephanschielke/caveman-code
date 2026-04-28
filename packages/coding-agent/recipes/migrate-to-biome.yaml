@@ -1,0 +1,22 @@
+goal: |
+  Migrate this project's linting and formatting toolchain to Biome.
+  1. Check whether ESLint, Prettier, TSLint, or other linters/formatters are currently configured.
+  2. Install Biome as a dev dependency: `npm install --save-dev @biomejs/biome`.
+  3. Run `npx @biomejs/biome init` to generate biome.json, then configure it to match the
+     project's existing code-style rules as closely as possible.
+  4. Remove ESLint / Prettier configs and their dependencies from package.json.
+  5. Replace lint/format scripts in package.json with Biome equivalents:
+       "lint":   "biome lint ."
+       "format": "biome format --write ."
+       "check":  "biome check --write ."
+  6. Run `biome check --write .` to auto-fix any formatting drift.
+  7. Run the test suite to confirm no logic was changed by formatting.
+  8. Update CI workflow files to call `biome check` instead of the old tools.
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+
+effort: medium

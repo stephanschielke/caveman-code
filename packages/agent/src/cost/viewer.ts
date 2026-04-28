@@ -14,13 +14,15 @@ export function filterEvents(events: TraceEvent[], filter?: string): TraceEvent[
 }
 
 function fmtLlmRow(e: TraceEvent): string {
-	const p = e.payload as {
-		model?: string;
-		inputTokens?: number;
-		cachedInputTokens?: number;
-		outputTokens?: number;
-		dollars?: number;
-	} | undefined;
+	const p = e.payload as
+		| {
+				model?: string;
+				inputTokens?: number;
+				cachedInputTokens?: number;
+				outputTokens?: number;
+				dollars?: number;
+		  }
+		| undefined;
 	return `llm  ${p?.model ?? "?"} in=${p?.inputTokens ?? 0} cached=${p?.cachedInputTokens ?? 0} out=${p?.outputTokens ?? 0} $${(p?.dollars ?? 0).toFixed(4)}`;
 }
 

@@ -14,11 +14,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
 	enforceSkillTokenBudget,
+	type LoadedSkillBody,
 	loadSkillBody,
 	loadSkillsFromDir,
 	SKILL_REATTACH_TOKEN_CAP,
 	SKILL_SHARED_TOKEN_BUDGET,
-	type LoadedSkillBody,
 } from "../src/core/skills.js";
 
 describe("WS5 skills — loadSkillBody + token caps", () => {
@@ -55,11 +55,7 @@ describe("WS5 skills — loadSkillBody + token caps", () => {
 		mkdirSync(skillDir, { recursive: true });
 		// 30k chars ≈ 7.5k tokens — well over the 5k re-attach cap.
 		const big = "x".repeat(30_000);
-		writeFileSync(
-			join(skillDir, "SKILL.md"),
-			`---\nname: huge\ndescription: Big skill body.\n---\n${big}`,
-			"utf-8",
-		);
+		writeFileSync(join(skillDir, "SKILL.md"), `---\nname: huge\ndescription: Big skill body.\n---\n${big}`, "utf-8");
 		const { skills } = loadSkillsFromDir({ dir, source: "test" });
 		const body = await loadSkillBody(skills[0], {
 			cwd: dir,
@@ -74,11 +70,7 @@ describe("WS5 skills — loadSkillBody + token caps", () => {
 	it("does not truncate small bodies under any cap", async () => {
 		const skillDir = join(dir, "tiny");
 		mkdirSync(skillDir, { recursive: true });
-		writeFileSync(
-			join(skillDir, "SKILL.md"),
-			"---\nname: tiny\ndescription: Tiny skill.\n---\nhello world",
-			"utf-8",
-		);
+		writeFileSync(join(skillDir, "SKILL.md"), "---\nname: tiny\ndescription: Tiny skill.\n---\nhello world", "utf-8");
 		const { skills } = loadSkillsFromDir({ dir, source: "test" });
 		const body = await loadSkillBody(skills[0], {
 			cwd: dir,

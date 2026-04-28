@@ -7,7 +7,7 @@
  * Skipped on Windows (CI doesn't currently run cave on Windows).
  */
 import { describe, expect, it } from "vitest";
-import { HooksExecutor, combineDecisions, type HookConfig } from "../src/core/hooks/index.js";
+import { combineDecisions, type HookConfig, HooksExecutor } from "../src/core/hooks/index.js";
 
 const skipOnWindows = process.platform === "win32" ? it.skip : it;
 

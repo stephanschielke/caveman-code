@@ -11,13 +11,24 @@ import { type ImageContent, modelsAreEqual, supportsXhigh } from "@cave/ai";
 import { detectTerminalIdentity, ProcessTerminal, probeTerminal, setKeybindings, TUI } from "@cave/tui";
 import chalk from "chalk";
 import { type Args, type Mode, parseArgs, printHelp } from "./cli/args.js";
+import { handleAttachCommand } from "./cli/attach.js";
 import { runDoctor } from "./cli/doctor.js";
+import { handleExecCommand } from "./cli/exec.js";
 import { processFileArguments } from "./cli/file-processor.js";
 import { buildInitialMessage } from "./cli/initial-message.js";
+import { handleListCommand } from "./cli/list.js";
 import { listModels } from "./cli/list-models.js";
 import { runLogin } from "./cli/login.js";
+import { handleMcpCommand } from "./cli/mcp-cli.js";
+import { handleModelsCommand } from "./cli/models.js";
+import { handlePluginCommand } from "./cli/plugin.js";
+import { handleRollbackCommand } from "./cli/rollback.js";
+import { handleRunRecipeCommand } from "./cli/run-recipe.js";
+import { handleServeCommand } from "./cli/serve.js";
 import { selectSession } from "./cli/session-picker.js";
 import { maybeNotifyUpdateAvailable, runSelfUpdate } from "./cli/update.js";
+import { handleWatchCommand } from "./cli/watch.js";
+import { handleWorkerCommand } from "./cli/worker.js";
 import { getAgentDir, getModelsPath, VERSION } from "./config.js";
 import { type CreateAgentSessionRuntimeFactory, createAgentSessionRuntime } from "./core/agent-session-runtime.js";
 import {
@@ -47,11 +58,6 @@ import { runMigrations, showDeprecationWarnings } from "./migrations.js";
 import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
 import { ExtensionSelectorComponent } from "./modes/interactive/components/extension-selector.js";
 import { initTheme, setDetectedBackground, stopThemeWatcher } from "./modes/interactive/theme/theme.js";
-import { handleMcpCommand } from "./cli/mcp-cli.js";
-import { handleAttachCommand } from "./cli/attach.js";
-import { handleListCommand } from "./cli/list.js";
-import { handleServeCommand } from "./cli/serve.js";
-import { handleWorkerCommand } from "./cli/worker.js";
 import { runOnboarding, shouldRunOnboarding } from "./onboarding/wizard.js";
 import { handleConfigCommand, handlePackageCommand } from "./package-manager-cli.js";
 import { isLocalPath } from "./utils/paths.js";
@@ -546,6 +552,37 @@ export async function main(args: string[]) {
 		return;
 	}
 
+	// WS18: cave watch — file watcher for // cave! comment triggers.
+	if (await handleWatchCommand(args)) {
+		return;
+	}
+
+	// WS16: cave exec — non-interactive single-shot CI mode.
+	if (await handleExecCommand(args)) {
+		return;
+	}
+
+	// WS13: cave plugin — plugin marketplace (search, install, list, upgrade, marketplace).
+	if (await handlePluginCommand(args)) {
+		return;
+	}
+
+	// WS14: cave run-recipe — Goose-style YAML recipe runner.
+	if (await handleRunRecipeCommand(args)) {
+		return;
+	}
+
+	// WS17: cave rollback — shadow-git checkpoint rollback.
+	if (await handleRollbackCommand(args)) {
+		return;
+	}
+
+	// WS15: cave models — provider/model registry (update, list, inspect).
+	const modelsExitCode = await handleModelsCommand(args);
+	if (modelsExitCode !== -1) {
+		process.exit(modelsExitCode);
+	}
+
 	const parsed = parseArgs(args);
 	if (parsed.diagnostics.length > 0) {
 		for (const d of parsed.diagnostics) {
@@ -615,9 +652,7 @@ export async function main(args: string[]) {
 	if (appMode === "interactive" && !offlineMode) {
 		void maybeNotifyUpdateAvailable(startupSettingsManager).then((newer) => {
 			if (newer) {
-				console.error(
-					chalk.dim(`(cave ${newer} is available — run \`cave self-update\` to upgrade)`),
-				);
+				console.error(chalk.dim(`(cave ${newer} is available — run \`cave self-update\` to upgrade)`));
 			}
 		});
 	}

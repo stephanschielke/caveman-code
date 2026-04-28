@@ -12,7 +12,7 @@
 // preserved for back-compat with existing callers.
 
 import type { McpTool } from "./serve.js";
-import { createTransport, createInProcessTransport } from "./transport/index.js";
+import { createInProcessTransport, createTransport } from "./transport/index.js";
 import type { McpRemoteTool, McpServerConfig, McpSettings, McpTransport } from "./types.js";
 
 export type { McpServerConfig } from "./types.js";

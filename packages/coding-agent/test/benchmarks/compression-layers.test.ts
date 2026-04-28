@@ -2,15 +2,15 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
+import { compressStructuredOutput } from "../../src/core/cave-structured-compression.js";
 import {
-	ReadDeduplicationCache,
 	collapseBlankLines,
 	compressCaveToolOutput,
+	ReadDeduplicationCache,
 	stripAnsi,
 	truncateLongOutput,
 	truncateWithToolBudget,
 } from "../../src/core/cave-tool-compression.js";
-import { compressStructuredOutput } from "../../src/core/cave-structured-compression.js";
 import { buildCaveModePrompt } from "../../src/core/system-prompt.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -346,7 +346,9 @@ afterAll(() => {
 		const orig = `${result.original.chars.toLocaleString()}`.padStart(10);
 		const comp = `${result.final.chars.toLocaleString()}`.padStart(10);
 		const savings = `-${result.final.totalSavingsPercent.toFixed(1)}%`.padStart(10);
-		const tokensSaved = `~${estimateTokens(result.original.chars - result.final.chars).toLocaleString()}`.padStart(12);
+		const tokensSaved = `~${estimateTokens(result.original.chars - result.final.chars).toLocaleString()}`.padStart(
+			12,
+		);
 		console.log(`| ${name} | ${orig} | ${comp} | ${savings} | ${tokensSaved} |`);
 	}
 

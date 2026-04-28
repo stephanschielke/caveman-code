@@ -1,6 +1,6 @@
 // T-028, T-029, T-030, T-031
 import { describe, expect, it } from "vitest";
-import { ToolResultCache, keyHash, normalizeToolOutput } from "../tools/result-cache.js";
+import { keyHash, normalizeToolOutput, ToolResultCache } from "../tools/result-cache.js";
 
 describe("ToolResultCache", () => {
 	const fp = { gitSha: "abc", mtime: 100, size: 42 };
@@ -127,9 +127,7 @@ describe("normalizeToolOutput", () => {
 
 	it("rewrites absolute workdir path to .", () => {
 		const input = "error in /Users/alice/proj/src/file.ts at line 10";
-		expect(normalizeToolOutput(input, "/Users/alice/proj")).toBe(
-			"error in ./src/file.ts at line 10",
-		);
+		expect(normalizeToolOutput(input, "/Users/alice/proj")).toBe("error in ./src/file.ts at line 10");
 	});
 
 	it("redacts ISO timestamps", () => {
@@ -140,9 +138,7 @@ describe("normalizeToolOutput", () => {
 	it("same-file reads at different times are byte-identical after normalize", () => {
 		const a = "2025-03-15T12:00:00Z /Users/a/proj/f.ts line 1";
 		const b = "2025-08-01T03:00:00Z /Users/a/proj/f.ts line 1";
-		expect(normalizeToolOutput(a, "/Users/a/proj")).toBe(
-			normalizeToolOutput(b, "/Users/a/proj"),
-		);
+		expect(normalizeToolOutput(a, "/Users/a/proj")).toBe(normalizeToolOutput(b, "/Users/a/proj"));
 	});
 
 	it("normalizes CRLF to LF and strips trailing whitespace", () => {

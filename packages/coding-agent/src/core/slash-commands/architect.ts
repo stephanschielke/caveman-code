@@ -20,7 +20,7 @@ import {
 	defaultArchitectState,
 	toggleArchitectMode,
 } from "../chat-modes/architect.js";
-import { isValidEditFormat, type EditFormatName } from "../edit-formats/index.js";
+import { type EditFormatName, isValidEditFormat } from "../edit-formats/index.js";
 
 export interface ArchitectCommandResult {
 	exitCode: number;
@@ -32,10 +32,7 @@ export interface ArchitectCommandIO {
 	state?: ArchitectModeState;
 }
 
-export async function runArchitectCommand(
-	args: string,
-	io: ArchitectCommandIO = {},
-): Promise<ArchitectCommandResult> {
+export async function runArchitectCommand(args: string, io: ArchitectCommandIO = {}): Promise<ArchitectCommandResult> {
 	const argv = args.trim().split(/\s+/).filter(Boolean);
 	const sub = argv[0] ?? "toggle";
 	const current = io.state ?? defaultArchitectState();

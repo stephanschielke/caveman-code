@@ -24,10 +24,7 @@ export interface InMemoryTraceSink extends TraceSink {
  * under a new key and opening a fresh one. Real impl will shell out to
  * `fs.appendFileSync`.
  */
-export function createInMemoryTraceSink(
-	basename: string,
-	rotateBytes = 1024 * 1024,
-): InMemoryTraceSink {
+export function createInMemoryTraceSink(basename: string, rotateBytes = 1024 * 1024): InMemoryTraceSink {
 	const sealed: Record<string, string[]> = {};
 	let active: string[] = [];
 	let activeBytes = 0;

@@ -12,17 +12,11 @@
  *  - Pi-check: nothing equivalent in pi-code upstream / pi-* npm scope.
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import chalk from "chalk";
 import { getAgentDir, VERSION } from "../config.js";
-import {
-	type DaemonHandle,
-	createDefaultRunnerFactory,
-	openStore,
-	startDaemon,
-} from "../core/daemon/index.js";
+import { createDefaultRunnerFactory, type DaemonHandle, openStore, startDaemon } from "../core/daemon/index.js";
 
 interface ServeArgs {
 	host: string;
@@ -136,7 +130,9 @@ export async function runServe(args: string[]): Promise<number> {
 			version: VERSION,
 		});
 	} catch (err) {
-		console.error(chalk.red(`Error: failed to bind ${parsed.host}:${parsed.port}: ${err instanceof Error ? err.message : err}`));
+		console.error(
+			chalk.red(`Error: failed to bind ${parsed.host}:${parsed.port}: ${err instanceof Error ? err.message : err}`),
+		);
 		store.close();
 		return 1;
 	}

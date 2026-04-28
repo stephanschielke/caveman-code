@@ -1,4 +1,12 @@
 export {
+	AgentSchema,
+	type AgentToolDetails,
+	type AgentToolInput,
+	type AgentToolOptions,
+	agentToolDefinition,
+	createAgentToolDefinition,
+} from "./agent.js";
+export {
 	type BashOperations,
 	type BashSpawnContext,
 	type BashSpawnHook,
@@ -62,6 +70,15 @@ export {
 	readTool,
 	readToolDefinition,
 } from "./read.js";
+// WS6: Subagents & Plan Mode
+export {
+	createTaskToolDefinition,
+	TaskSchema,
+	type TaskToolDetails,
+	type TaskToolInput,
+	type TaskToolOptions,
+	taskToolDefinition,
+} from "./task.js";
 export {
 	DEFAULT_MAX_BYTES,
 	DEFAULT_MAX_LINES,
@@ -81,23 +98,6 @@ export {
 	writeTool,
 	writeToolDefinition,
 } from "./write.js";
-// WS6: Subagents & Plan Mode
-export {
-	createTaskToolDefinition,
-	taskToolDefinition,
-	TaskSchema,
-	type TaskToolInput,
-	type TaskToolDetails,
-	type TaskToolOptions,
-} from "./task.js";
-export {
-	createAgentToolDefinition,
-	agentToolDefinition,
-	AgentSchema,
-	type AgentToolInput,
-	type AgentToolDetails,
-	type AgentToolOptions,
-} from "./agent.js";
 
 import type { AgentTool } from "@cave/agent";
 import type { ToolDefinition } from "../extensions/types.js";

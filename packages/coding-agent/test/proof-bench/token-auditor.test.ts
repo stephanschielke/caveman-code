@@ -1,10 +1,5 @@
-import { describe, it, expect } from "vitest";
-import {
-	auditLiveRun,
-	computeDelta,
-	isWithinTolerance,
-	DEFAULT_TOLERANCE_PCT,
-} from "./token-auditor.js";
+import { describe, expect, it } from "vitest";
+import { auditLiveRun, computeDelta, DEFAULT_TOLERANCE_PCT, isWithinTolerance } from "./token-auditor.js";
 
 describe("token-auditor", () => {
 	describe("computeDelta", () => {

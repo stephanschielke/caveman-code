@@ -21,7 +21,11 @@ type WTSTreeCursor = any;
 /*  State                                                              */
 /* ------------------------------------------------------------------ */
 
-let ParserCtor: { new (): WTSParser; init: () => Promise<void>; Language: { load: (path: string) => Promise<WTSLanguage> } } | null = null;
+let ParserCtor: {
+	new (): WTSParser;
+	init: () => Promise<void>;
+	Language: { load: (path: string) => Promise<WTSLanguage> };
+} | null = null;
 let parser: WTSParser | null = null;
 let initAttempted = false;
 const loadedLanguages = new Map<string, WTSLanguage>();
@@ -158,11 +162,7 @@ const KIND_MAP: Record<string, ParsedSymbol["kind"]> = {
 /*  Symbol extraction via tree-sitter AST walk                         */
 /* ------------------------------------------------------------------ */
 
-export async function extractSymbols(
-	file: string,
-	source: string,
-	lang: RepoLanguage,
-): Promise<ParsedSymbol[] | null> {
+export async function extractSymbols(file: string, source: string, lang: RepoLanguage): Promise<ParsedSymbol[] | null> {
 	if (!parser) return null;
 	const language = await loadLanguage(lang);
 	if (!language) return null;
@@ -182,9 +182,7 @@ export async function extractSymbols(
 				const startIdx: number = node.startIndex;
 				const nextNewline = source.indexOf("\n", startIdx);
 				const endIdx =
-					nextNewline !== -1
-						? Math.min(startIdx + 200, nextNewline)
-						: Math.min(startIdx + 200, source.length);
+					nextNewline !== -1 ? Math.min(startIdx + 200, nextNewline) : Math.min(startIdx + 200, source.length);
 				const signature = source.slice(startIdx, endIdx).trim();
 
 				symbols.push({

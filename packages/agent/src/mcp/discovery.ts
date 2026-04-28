@@ -30,11 +30,7 @@ export interface LoadedConfig {
 const PROJECT_PATHS = [".mcp.json", ".cave/mcp.json"] as const;
 
 function userPaths(home: string): string[] {
-	return [
-		join(home, ".cave", "mcp.json"),
-		join(home, ".claude", "mcp.json"),
-		join(home, ".codex", "mcp.json"),
-	];
+	return [join(home, ".cave", "mcp.json"), join(home, ".claude", "mcp.json"), join(home, ".codex", "mcp.json")];
 }
 
 export function getProjectConfigPath(cwd = process.cwd()): string {

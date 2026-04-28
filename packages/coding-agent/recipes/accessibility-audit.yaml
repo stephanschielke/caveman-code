@@ -1,0 +1,24 @@
+goal: |
+  Perform a WCAG 2.1 AA accessibility audit on the web application in the current repository.
+  1. Scan HTML / JSX / template files for:
+       - Missing or empty alt attributes on images
+       - Form inputs without associated <label> elements
+       - Buttons/links with no accessible text (aria-label or visible text)
+       - Missing lang attribute on <html> element
+       - Insufficient colour contrast (flag hardcoded low-contrast colour pairs)
+       - Focus order and keyboard-navigability issues
+       - ARIA roles applied incorrectly
+       - Missing skip-navigation links on multi-section pages
+  2. Categorise findings by WCAG success criterion (Level A / AA).
+  3. Fix all Level A violations and as many AA violations as possible directly.
+  4. Summarise remaining issues with WCAG criterion references.
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+  - grep
+  - find
+
+effort: medium

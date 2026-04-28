@@ -3,7 +3,7 @@
 // Deterministic fallback (pure JS) + real BERT token-classification
 // inference via ONNX runtime when useOnnx=true.
 
-import { BertTokenizer, type BertToken } from "./bert-tokenizer.js";
+import { type BertToken, BertTokenizer } from "./bert-tokenizer.js";
 import { downloadModel, isModelCached, LLMLINGUA2_MANIFEST, modelPath, vocabPath } from "./model-download.js";
 import {
 	type CompressionMiddleware,
@@ -135,9 +135,9 @@ export class LLMLinguaMiddleware implements CompressionMiddleware {
 		const mPath = modelPath(LLMLINGUA2_MANIFEST);
 		try {
 			const ort = await import("onnxruntime-node");
-			this.onnxSession = await ort.InferenceSession.create(mPath, {
+			this.onnxSession = (await ort.InferenceSession.create(mPath, {
 				executionProviders: ["cpu"],
-			}) as unknown as OnnxInferenceSession;
+			})) as unknown as OnnxInferenceSession;
 		} catch (e) {
 			throw new Error(`llmlingua: ONNX runtime init failed: ${e}`);
 		}

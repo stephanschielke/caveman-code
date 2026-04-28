@@ -78,7 +78,7 @@ function findSymbolRange(
 			}
 			// Brace-balance forward
 			let depth = openIdx === -1 ? 0 : 1;
-			let startOffset = lineStart(source, i);
+			const startOffset = lineStart(source, i);
 			let endLine = i;
 			let endOffset = source.length;
 			if (openIdx !== -1) {
@@ -125,12 +125,7 @@ function offsetLine(source: string, offset: number): number {
 	return line;
 }
 
-export function editSymbol(
-	file: string,
-	source: string,
-	qualifiedName: string,
-	newBody: string,
-): EditSymbolResult {
+export function editSymbol(file: string, source: string, qualifiedName: string, newBody: string): EditSymbolResult {
 	const language = languageFor(file);
 	if (!isSupported(language)) {
 		return { status: "unsupported_language", reason: "unsupported_language", language };

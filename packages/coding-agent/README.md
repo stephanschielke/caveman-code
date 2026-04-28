@@ -455,6 +455,23 @@ Development docs:
 
 ---
 
+## Plugin Marketplace
+
+Cave supports a plugin ecosystem. Plugins bundle commands, skills, agents, themes, hooks, and MCP server configs.
+
+```bash
+cave plugin search [query]           # Search all configured marketplaces
+cave plugin install <owner/name>     # Install a plugin from GitHub or a URL
+cave plugin list                     # Show installed plugins
+cave plugin upgrade                  # Upgrade all installed plugins
+cave plugin marketplace add <url>    # Register a remote marketplace
+cave plugin marketplace list         # Show configured marketplace sources
+```
+
+Marketplaces are resolved in order: repo (`.cave/plugins/marketplace.json`), personal (`~/.cave/plugins/marketplace.json`), and remote URLs. Plugins install into `~/.cave/plugins/<owner>/<name>/`. To scaffold a new plugin, use `/plugin create` in interactive mode (invokes the `plugin-creator` skill).
+
+---
+
 ## License
 
 MIT

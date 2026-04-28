@@ -2,6 +2,8 @@
 export * from "./agent.js";
 // Loop functions
 export * from "./agent-loop.js";
+// Checkpoints (WS17)
+export * as checkpoints from "./checkpoints/index.js";
 // Compression
 export * from "./compression/index.js";
 // MCP
@@ -20,6 +22,6 @@ export * from "./router.js";
 export * from "./sandbox/index.js";
 // Subagents & Plan Mode (WS6)
 export * from "./subagent.js";
-export * from "./worktree.js";
 // Types
 export * from "./types.js";
+export * from "./worktree.js";

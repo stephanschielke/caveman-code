@@ -70,10 +70,16 @@ async function callCountTokens(input: AuditInput): Promise<number> {
 	return json.input_tokens;
 }
 
-export async function auditLiveRun(input: AuditInput, fetchImpl: typeof callCountTokens = callCountTokens): Promise<AuditResult> {
+export async function auditLiveRun(
+	input: AuditInput,
+	fetchImpl: typeof callCountTokens = callCountTokens,
+): Promise<AuditResult> {
 	const tolerancePct = input.tolerancePct ?? DEFAULT_TOLERANCE_PCT;
 	const recount = await fetchImpl(input);
-	const delta = input.cliReportedInputTokens === 0 ? 0 : Math.abs(recount - input.cliReportedInputTokens) / input.cliReportedInputTokens;
+	const delta =
+		input.cliReportedInputTokens === 0
+			? 0
+			: Math.abs(recount - input.cliReportedInputTokens) / input.cliReportedInputTokens;
 	const deltaPct = delta * 100;
 	return {
 		recountInputTokens: recount,

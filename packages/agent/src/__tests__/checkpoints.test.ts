@@ -1,11 +1,6 @@
 // T-023, T-024, T-025
 import { describe, expect, it } from "vitest";
-import {
-	isMutatingTool,
-	JSONL_V3_COMPAT,
-	ShadowCheckpoints,
-	shadowRepoPath,
-} from "../checkpoints/shadow-git.js";
+import { isMutatingTool, JSONL_V3_COMPAT, ShadowCheckpoints, shadowRepoPath } from "../checkpoints/shadow-git.js";
 
 describe("shadowRepoPath", () => {
 	it("uses ~/.cave/checkpoints/<session>/.git", () => {

@@ -8,8 +8,7 @@ export interface ToolSchema {
 	parameters?: unknown;
 }
 
-const ISO_TIMESTAMP_RE =
-	/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\b/g;
+const ISO_TIMESTAMP_RE = /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\b/g;
 const ABSOLUTE_PATH_RE = /(?:\/(?:Users|home|tmp|var|opt)\/[^\s"'`]+)/g;
 
 function scrub(text: string): string {

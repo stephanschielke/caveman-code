@@ -53,6 +53,8 @@ import {
 } from "../../config.js";
 import { type AgentSession, type AgentSessionEvent, parseSkillBlock } from "../../core/agent-session.js";
 import type { AgentSessionRuntime } from "../../core/agent-session-runtime.js";
+import { formatInlineCostWithRates, formatSessionEndSummary } from "../../core/cost-formatter.js";
+import { persistSessionCost } from "../../core/cost-persistence.js";
 import type {
 	ExtensionContext,
 	ExtensionRunner,
@@ -68,7 +70,7 @@ import { DefaultPackageManager } from "../../core/package-manager.js";
 import type { ResourceDiagnostic } from "../../core/resource-loader.js";
 import { formatMissingSessionCwdPrompt, MissingSessionCwdError } from "../../core/session-cwd.js";
 import { type SessionContext, SessionManager } from "../../core/session-manager.js";
-import { BUILTIN_SLASH_COMMANDS } from "../../core/slash-commands.js";
+import { BUILTIN_SLASH_COMMANDS, runCostCommand, runTokensCommand } from "../../core/slash-commands.js";
 import type { SourceInfo } from "../../core/source-info.js";
 import type { TruncationResult } from "../../core/tools/truncate.js";
 import { getChangelogPath, getNewEntries, parseChangelog } from "../../utils/changelog.js";
@@ -2241,6 +2243,16 @@ export class InteractiveMode {
 				this.handleCaveCommand(text);
 				return;
 			}
+			if (text === "/tokens") {
+				this.editor.setText("");
+				this.handleTokensCommand();
+				return;
+			}
+			if (text === "/cost") {
+				this.editor.setText("");
+				this.handleCostCommand();
+				return;
+			}
 			if (text === "/reload") {
 				this.editor.setText("");
 				await this.handleReloadCommand();
@@ -2465,6 +2477,21 @@ export class InteractiveMode {
 						}
 					}
 					this.streamingComponent = undefined;
+					// WS19: render inline cost after each successful assistant message
+					if (event.message.role === "assistant") {
+						const assistantMsg = event.message;
+						const u = assistantMsg.usage;
+						const pricingKnown = u.cost.total > 0;
+						const inlineLine = formatInlineCostWithRates({
+							dollarsTotal: u.cost.total,
+							pricingKnown,
+							dollarsCachedRead: u.cost.cacheRead,
+							cachedInput: u.cacheRead,
+							inputTokens: u.input,
+							outputTokens: u.output,
+						});
+						this.chatContainer.addChild(new Text(theme.fg("dim", inlineLine), 1, 0));
+					}
 					this.streamingMessage = undefined;
 					this.footer.invalidate();
 				}
@@ -4916,6 +4943,42 @@ export class InteractiveMode {
 		this.ui.requestRender();
 	}
 
+	// WS19: /tokens command — per-source-bucket token breakdown
+	private handleTokensCommand(): void {
+		const stats = this.session.getSessionStats();
+		const result = runTokensCommand({
+			stats: {
+				inputTokens: stats.tokens.input,
+				outputTokens: stats.tokens.output,
+				cacheReadTokens: stats.tokens.cacheRead,
+				cacheWriteTokens: stats.tokens.cacheWrite,
+				dollars: stats.cost,
+			},
+		});
+		this.chatContainer.addChild(new Spacer(1));
+		this.chatContainer.addChild(new Text(result.lines.join("\n"), 1, 0));
+		this.ui.requestRender();
+	}
+
+	// WS19: /cost command — session + today + this-week totals
+	private handleCostCommand(): void {
+		const stats = this.session.getSessionStats();
+		const pricingKnown = stats.cost > 0;
+		const result = runCostCommand({
+			stats: {
+				inputTokens: stats.tokens.input,
+				outputTokens: stats.tokens.output,
+				cacheReadTokens: stats.tokens.cacheRead,
+				cacheWriteTokens: stats.tokens.cacheWrite,
+				dollars: stats.cost,
+				pricingKnown,
+			},
+		});
+		this.chatContainer.addChild(new Spacer(1));
+		this.chatContainer.addChild(new Text(result.lines.join("\n"), 1, 0));
+		this.ui.requestRender();
+	}
+
 	private updateSmokeSignal(): void {
 		const caveState = this.session.getCaveModeSessionState();
 		if (!caveState.enabled) {
@@ -5070,6 +5133,37 @@ export class InteractiveMode {
 		if (this.isInitialized) {
 			this.ui.stop();
 			this.isInitialized = false;
+		}
+
+		// WS19: print session-end cost summary and persist to ~/.cave/cost-totals.json
+		this.printAndPersistSessionCost();
+	}
+
+	private printAndPersistSessionCost(): void {
+		try {
+			const stats = this.session.getSessionStats();
+			if (stats.tokens.input === 0 && stats.tokens.output === 0) return;
+
+			const pricingKnown = stats.cost > 0;
+			const summary = formatSessionEndSummary({
+				inputTokens: stats.tokens.input,
+				outputTokens: stats.tokens.output,
+				dollars: stats.cost,
+				pricingKnown,
+			});
+			// Write to stderr so it appears after TUI teardown without interfering with stdout
+			process.stderr.write(`\n${summary}\n`);
+
+			// Persist to ~/.cave/cost-totals.json atomically
+			persistSessionCost({
+				inputTokens: stats.tokens.input,
+				outputTokens: stats.tokens.output,
+				cacheCreateTokens: stats.tokens.cacheWrite,
+				cacheReadTokens: stats.tokens.cacheRead,
+				dollars: stats.cost,
+			});
+		} catch {
+			// Best-effort — never crash on exit
 		}
 	}
 

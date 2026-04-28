@@ -9,16 +9,16 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { compressStructuredOutput } from "../../src/core/cave-structured-compression.js";
 import {
 	collapseBlankLines,
 	compressCaveToolOutput,
 	stripAnsi,
-	truncateWithToolBudget,
 	truncateLongOutput,
+	truncateWithToolBudget,
 } from "../../src/core/cave-tool-compression.js";
-import { compressStructuredOutput } from "../../src/core/cave-structured-compression.js";
 import { buildCaveModePrompt } from "../../src/core/system-prompt.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -60,7 +60,9 @@ function inferCommandHint(filename: string): string | undefined {
 }
 
 function loadFixtures(): Fixture[] {
-	const files = readdirSync(CORPUS_DIR).filter((f) => f.endsWith(".txt")).sort();
+	const files = readdirSync(CORPUS_DIR)
+		.filter((f) => f.endsWith(".txt"))
+		.sort();
 	return files.map((name) => ({
 		name,
 		content: readFileSync(join(CORPUS_DIR, name), "utf-8"),
@@ -94,12 +96,7 @@ function isolateLayersOnFixture(f: Fixture): LayerIsolationRow[] {
 	rows.push(row(f.name, "flint-budget", base, tokensOf(budget)));
 
 	rows.push(
-		row(
-			f.name,
-			"stone-structured",
-			base,
-			tokensOf(compressStructuredOutput(f.content, f.toolName, f.commandHint)),
-		),
+		row(f.name, "stone-structured", base, tokensOf(compressStructuredOutput(f.content, f.toolName, f.commandHint))),
 	);
 
 	rows.push(row(f.name, "truncate-500-line", base, tokensOf(truncateLongOutput(f.content))));

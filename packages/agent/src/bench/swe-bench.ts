@@ -30,10 +30,7 @@ export interface BenchRunOptions {
 	}>;
 }
 
-export async function runBench(
-	instances: BenchInstance[],
-	opts: BenchRunOptions,
-): Promise<BenchInstanceResult[]> {
+export async function runBench(instances: BenchInstance[], opts: BenchRunOptions): Promise<BenchInstanceResult[]> {
 	const results: BenchInstanceResult[] = [];
 	for (const instance of instances) {
 		const run = await opts.runInstance(instance);
@@ -67,4 +64,4 @@ export function aggregateBench(results: BenchInstanceResult[]): {
 	};
 }
 
-export { loadSweBenchVerified, loadSweBenchFromFile } from "./swe-bench-dataset.js";
+export { loadSweBenchFromFile, loadSweBenchVerified } from "./swe-bench-dataset.js";

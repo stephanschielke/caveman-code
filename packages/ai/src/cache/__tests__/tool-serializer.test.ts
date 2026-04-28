@@ -37,9 +37,7 @@ describe("serializeToolSchemas", () => {
 
 	it("editing one tool description isolates to tools-layer hash (it changes)", () => {
 		const original = toolSchemaHash(baseTools);
-		const edited = baseTools.map((t) =>
-			t.name === "read" ? { ...t, description: "Read a file from disk" } : t,
-		);
+		const edited = baseTools.map((t) => (t.name === "read" ? { ...t, description: "Read a file from disk" } : t));
 		const editedHash = toolSchemaHash(edited);
 		expect(editedHash).not.toBe(original);
 	});

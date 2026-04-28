@@ -85,12 +85,9 @@ describe("AcpSession", () => {
 	it("captures tool handler errors into error field", async () => {
 		const s = new AcpSession();
 		s.initialize({ method: "initialize", params: { clientVersion: "1" } });
-		const r = await s.forwardTool(
-			{ method: "tool/call", params: { name: "boom", arguments: {} } },
-			async () => {
-				throw new Error("nope");
-			},
-		);
+		const r = await s.forwardTool({ method: "tool/call", params: { name: "boom", arguments: {} } }, async () => {
+			throw new Error("nope");
+		});
 		expect(r.error).toBe("nope");
 	});
 });

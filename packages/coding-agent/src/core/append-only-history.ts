@@ -23,10 +23,7 @@ export class AppendOnlyHistory {
 
 	append(block: Omit<HistoryBlock, "turnIndex"> & { turnIndex?: number }): HistoryBlock {
 		const turnIndex = block.turnIndex ?? this.blocks.length;
-		if (
-			this.blocks.length > 0 &&
-			turnIndex <= this.blocks[this.blocks.length - 1].turnIndex
-		) {
+		if (this.blocks.length > 0 && turnIndex <= this.blocks[this.blocks.length - 1].turnIndex) {
 			throw new Error(
 				`append-only: turnIndex ${turnIndex} must exceed tail ${this.blocks[this.blocks.length - 1].turnIndex}`,
 			);
@@ -46,10 +43,7 @@ export class AppendOnlyHistory {
 	}
 
 	byteHash(upToTurn?: number): string {
-		const slice =
-			upToTurn === undefined
-				? this.blocks
-				: this.blocks.filter((b) => b.turnIndex <= upToTurn);
+		const slice = upToTurn === undefined ? this.blocks : this.blocks.filter((b) => b.turnIndex <= upToTurn);
 		return createHash("sha256")
 			.update(slice.map((b) => `${b.turnIndex}:${b.kind}:${b.bytes}`).join("\n"))
 			.digest("hex");
@@ -78,17 +72,13 @@ export function assertPrefixUnchanged(
 	const beforePrefix = before.filter((b) => b.turnIndex < pivot);
 	const afterPrefix = after.filter((b) => b.turnIndex < pivot);
 	if (beforePrefix.length !== afterPrefix.length) {
-		throw new Error(
-			`append-only violation: prefix length ${beforePrefix.length} → ${afterPrefix.length}`,
-		);
+		throw new Error(`append-only violation: prefix length ${beforePrefix.length} → ${afterPrefix.length}`);
 	}
 	for (let i = 0; i < beforePrefix.length; i++) {
 		const a = beforePrefix[i];
 		const b = afterPrefix[i];
 		if (a.turnIndex !== b.turnIndex || a.kind !== b.kind || a.bytes !== b.bytes) {
-			throw new Error(
-				`append-only violation at turn ${a.turnIndex}: historical block mutated`,
-			);
+			throw new Error(`append-only violation at turn ${a.turnIndex}: historical block mutated`);
 		}
 	}
 }

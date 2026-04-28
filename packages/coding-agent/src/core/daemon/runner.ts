@@ -16,8 +16,8 @@
  */
 
 import { randomUUID } from "node:crypto";
-import type { AgentRunner, RunnerEmitter, RunnerFactory } from "./server.js";
 import type { MessageRecord, SessionRecord } from "./protocol.js";
+import type { AgentRunner, RunnerEmitter, RunnerFactory } from "./server.js";
 
 export interface DefaultRunnerOptions {
 	/** Tokens emitted per second when streaming the echo. Default 200. */

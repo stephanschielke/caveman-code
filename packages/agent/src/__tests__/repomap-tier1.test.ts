@@ -1,15 +1,10 @@
 // T-059..T-071
 import { describe, expect, it } from "vitest";
-import { parseFile } from "../repomap/parser.js";
-import { buildSymbolGraph } from "../repomap/symbol-graph.js";
-import { pagerank, selectWithinBudget } from "../repomap/pagerank.js";
-import {
-	estimateRenderTokens,
-	injectRepomap,
-	renderRepomap,
-	stripRepomap,
-} from "../repomap/render.js";
 import { RepomapCache } from "../repomap/cache.js";
+import { pagerank, selectWithinBudget } from "../repomap/pagerank.js";
+import { parseFile } from "../repomap/parser.js";
+import { estimateRenderTokens, injectRepomap, renderRepomap, stripRepomap } from "../repomap/render.js";
+import { buildSymbolGraph } from "../repomap/symbol-graph.js";
 
 const fileA = `export function alpha() {}
 export const beta = 1;
@@ -92,9 +87,7 @@ describe("pagerank", () => {
 		const budget = ranked.length - 1;
 		const selected = selectWithinBudget(ranked, budget, () => 1);
 		expect(selected.length).toBe(budget);
-		expect(selected.map((r) => r.node.name)).toEqual(
-			ranked.slice(0, budget).map((r) => r.node.name),
-		);
+		expect(selected.map((r) => r.node.name)).toEqual(ranked.slice(0, budget).map((r) => r.node.name));
 	});
 });
 

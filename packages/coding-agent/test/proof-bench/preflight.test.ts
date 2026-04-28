@@ -1,15 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-	checkPassAtOneGap,
-	checkTokenAudit,
+	checkCostCap,
 	checkIsoQualityIntersection,
 	checkOutputQualityGap,
-	checkSeedCount,
-	checkCostCap,
+	checkPassAtOneGap,
 	checkSchema,
-	runPreflight,
-	type PreflightInput,
+	checkSeedCount,
+	checkTokenAudit,
 	type LiveRow,
+	type PreflightInput,
+	runPreflight,
 } from "./preflight.js";
 
 const baseManifest = {
@@ -35,7 +35,11 @@ function liveRow(overrides: Partial<LiveRow> = {}): LiveRow {
 	};
 }
 
-function inputWith(live: LiveRow[], outputEval: PreflightInput["results"]["outputEval"] = [], extra: Partial<PreflightInput["results"]> = {}): PreflightInput {
+function inputWith(
+	live: LiveRow[],
+	outputEval: PreflightInput["results"]["outputEval"] = [],
+	extra: Partial<PreflightInput["results"]> = {},
+): PreflightInput {
 	return {
 		results: { live, outputEval, costUsd: 0, ...extra },
 		manifest: baseManifest,

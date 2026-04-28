@@ -1,0 +1,22 @@
+goal: |
+  Migrate outdated dependencies in this project.
+  1. Run the package manager's outdated command to identify packages that need updates.
+  2. For each outdated package, check the changelog or release notes for breaking changes.
+  3. Update packages one group at a time (patch, then minor, then major).
+  4. Run the test suite after each group to verify nothing broke.
+  5. Update import statements or usage patterns if an API changed.
+  6. Summarise every package upgraded and any breaking-change adaptations made.
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+
+effort: medium
+
+inputs:
+  scope:
+    description: "Which packages to upgrade: 'all', 'patch', 'minor', or 'major' (default: all)"
+    required: false
+    default: "all"

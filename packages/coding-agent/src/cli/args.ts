@@ -48,6 +48,8 @@ export interface Args {
 	listModels?: string | true;
 	offline?: boolean;
 	verbose?: boolean;
+	/** WS18: watch mode flag (`cave --watch` or `cave watch`) */
+	watch?: boolean;
 	messages: string[];
 	fileArgs: string[];
 	/** Unknown flags (potentially extension flags) - map of flag name to value */
@@ -170,6 +172,8 @@ export function parseArgs(args: string[]): Args {
 			}
 		} else if (arg === "--verbose") {
 			result.verbose = true;
+		} else if (arg === "--watch") {
+			result.watch = true;
 		} else if (arg === "--offline") {
 			result.offline = true;
 		} else if (arg.startsWith("@")) {
@@ -221,6 +225,13 @@ ${chalk.bold("Commands:")}
   ${APP_NAME} update [source]           Update installed extensions (skips pinned sources)
   ${APP_NAME} list                      List installed extensions from settings
   ${APP_NAME} config                    Open TUI to enable/disable package resources
+  ${APP_NAME} plugin search [query]     Search plugin marketplaces
+  ${APP_NAME} plugin install <ref>      Install a plugin (owner/name)
+  ${APP_NAME} plugin list               List installed plugins
+  ${APP_NAME} plugin upgrade            Upgrade all installed plugins
+  ${APP_NAME} plugin marketplace add <url>  Register a remote marketplace
+  ${APP_NAME} run-recipe <name>         Run a Goose-style YAML recipe (WS14)
+  ${APP_NAME} run-recipe --list         List all available recipes
   ${APP_NAME} <command> --help          Show help for install/remove/uninstall/update/list
 
 ${chalk.bold("Options:")}
@@ -255,6 +266,7 @@ ${chalk.bold("Options:")}
   --list-models [search]         List available models (with optional fuzzy search)
   --verbose                      Force verbose startup (overrides quietStartup setting)
   --offline                      Disable startup network operations (same as PI_OFFLINE=1)
+  --watch                        Start watch mode (alias for \`cave watch\`)
   --help, -h                     Show this help
   --version, -v                  Show version number
 

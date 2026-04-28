@@ -25,9 +25,7 @@ export function applyReview(
 	decisions: HunkDecision[],
 ): HunkReviewResult {
 	if (decisions.length !== payload.hunks.length) {
-		throw new Error(
-			`review: decision count ${decisions.length} must match hunk count ${payload.hunks.length}`,
-		);
+		throw new Error(`review: decision count ${decisions.length} must match hunk count ${payload.hunks.length}`);
 	}
 	const applied: Hunk[] = [];
 	const rejected: Hunk[] = [];

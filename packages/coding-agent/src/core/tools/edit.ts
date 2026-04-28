@@ -18,6 +18,8 @@ import { withFileMutationQueue } from "./file-mutation-queue.js";
 import { resolveToCwd } from "./path-utils.js";
 import { invalidArgText, shortenPath, str } from "./render-utils.js";
 import { wrapToolDefinition } from "./tool-definition-wrapper.js";
+// WS17: pre-mutate snapshot hook interface (re-used from write.ts duck type)
+import type { PreMutateHook } from "./write.js";
 
 type EditRenderState = Record<string, never>;
 
@@ -78,6 +80,10 @@ const defaultEditOperations: EditOperations = {
 export interface EditToolOptions {
 	/** Custom operations for file editing. Default: local filesystem */
 	operations?: EditOperations;
+	/** WS17: optional pre-mutate checkpoint hook */
+	preMutateHook?: PreMutateHook;
+	/** WS17: session ID for checkpoint tagging */
+	sessionId?: string;
 }
 
 function prepareEditArguments(input: unknown): EditToolInput {
@@ -155,6 +161,9 @@ export function createEditToolDefinition(
 	options?: EditToolOptions,
 ): ToolDefinition<typeof editSchema, EditToolDetails | undefined, EditRenderState> {
 	const ops = options?.operations ?? defaultEditOperations;
+	// WS17: pre-mutate snapshot hook
+	const preMutateHook = options?.preMutateHook;
+	const sessionId = options?.sessionId ?? "default";
 	return {
 		name: "edit",
 		label: "edit",
@@ -171,6 +180,10 @@ export function createEditToolDefinition(
 		parameters: editSchema,
 		prepareArguments: prepareEditArguments,
 		async execute(_toolCallId, input: EditToolInput, signal?: AbortSignal, _onUpdate?, _ctx?) {
+			// WS17: pre-mutate snapshot — fire-and-forget, never blocks the edit
+			if (preMutateHook) {
+				preMutateHook.preToolSnapshot("edit", sessionId).catch(() => {});
+			}
 			const { path, edits } = validateEditInput(input);
 			const absolutePath = resolveToCwd(path, cwd);
 

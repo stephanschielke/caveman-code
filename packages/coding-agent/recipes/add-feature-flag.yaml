@@ -1,0 +1,25 @@
+goal: |
+  Add a feature flag named "{{flag_name}}" to the codebase.
+  1. Identify the project's existing feature-flag mechanism (env var, config object, LaunchDarkly, etc.).
+     If none exists, create a minimal flags.ts / feature-flags.js module.
+  2. Register the new flag "{{flag_name}}" with a default value of false (disabled by default).
+  3. Gate the feature behind the flag wherever "{{context}}" is relevant.
+  4. Add a test that verifies the feature is off by default and on when the flag is enabled.
+  5. Document the flag in a comment or README section.
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+
+effort: low
+
+inputs:
+  flag_name:
+    description: "Name of the feature flag to add (e.g. enable_dark_mode)"
+    required: true
+  context:
+    description: "Brief description of what the flag gates (e.g. the new checkout flow)"
+    required: false
+    default: "the new feature"

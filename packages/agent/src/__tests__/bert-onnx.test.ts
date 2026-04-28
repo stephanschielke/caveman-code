@@ -1,36 +1,36 @@
 import { describe, expect, it } from "vitest";
 import { BertTokenizer } from "../compression/bert-tokenizer.js";
-import { type OnnxSessionFactory, LLMLinguaMiddleware, deterministicCompress } from "../compression/llmlingua.js";
+import { deterministicCompress, LLMLinguaMiddleware, type OnnxSessionFactory } from "../compression/llmlingua.js";
 
 // ── Mini vocabulary for tests (no filesystem needed) ────────────────
 const MINI_VOCAB = [
-	"[PAD]",      // 0
-	"[UNK]",      // 1
-	"[CLS]",      // 2
-	"[SEP]",      // 3
-	"hello",      // 4
-	"world",      // 5
-	"the",        // 6
-	"quick",      // 7
-	"brown",      // 8
-	"fox",        // 9
-	"jumps",      // 10
-	"over",       // 11
-	"lazy",       // 12
-	"dog",        // 13
-	"function",   // 14
-	"return",     // 15
-	"const",      // 16
-	"##s",        // 17
-	"##ed",       // 18
-	"##ing",      // 19
-	"##ly",       // 20
-	"jump",       // 21
-	".",          // 22
-	",",          // 23
-	"(",          // 24
-	")",          // 25
-	"test",       // 26
+	"[PAD]", // 0
+	"[UNK]", // 1
+	"[CLS]", // 2
+	"[SEP]", // 3
+	"hello", // 4
+	"world", // 5
+	"the", // 6
+	"quick", // 7
+	"brown", // 8
+	"fox", // 9
+	"jumps", // 10
+	"over", // 11
+	"lazy", // 12
+	"dog", // 13
+	"function", // 14
+	"return", // 15
+	"const", // 16
+	"##s", // 17
+	"##ed", // 18
+	"##ing", // 19
+	"##ly", // 20
+	"jump", // 21
+	".", // 22
+	",", // 23
+	"(", // 24
+	")", // 25
+	"test", // 26
 ].join("\n");
 
 function miniTokenizer(): BertTokenizer {
@@ -45,14 +45,14 @@ describe("BertTokenizer", () => {
 		const tokens = tok.tokenize("hello world");
 		expect(tokens[0].text).toBe("[CLS]");
 		expect(tokens[tokens.length - 1].text).toBe("[SEP]");
-		const content = tokens.filter(t => t.wordIndex >= 0);
-		expect(content.map(t => t.text)).toEqual(["hello", "world"]);
+		const content = tokens.filter((t) => t.wordIndex >= 0);
+		expect(content.map((t) => t.text)).toEqual(["hello", "world"]);
 	});
 
 	it("tracks character offsets correctly", () => {
 		const tok = miniTokenizer();
 		const tokens = tok.tokenize("hello world");
-		const content = tokens.filter(t => t.wordIndex >= 0);
+		const content = tokens.filter((t) => t.wordIndex >= 0);
 		expect(content[0].startOffset).toBe(0);
 		expect(content[0].endOffset).toBe(5);
 		expect(content[1].startOffset).toBe(6);
@@ -62,7 +62,7 @@ describe("BertTokenizer", () => {
 	it("preserves offsets across multiple whitespace types", () => {
 		const tok = miniTokenizer();
 		const tokens = tok.tokenize("hello\n  world");
-		const content = tokens.filter(t => t.wordIndex >= 0);
+		const content = tokens.filter((t) => t.wordIndex >= 0);
 		expect(content[0].startOffset).toBe(0);
 		expect(content[0].endOffset).toBe(5);
 		// "world" starts after "hello\n  " = index 8
@@ -73,15 +73,15 @@ describe("BertTokenizer", () => {
 	it("handles unknown words as [UNK]", () => {
 		const tok = miniTokenizer();
 		const tokens = tok.tokenize("supercalifragilistic");
-		const content = tokens.filter(t => t.wordIndex >= 0);
+		const content = tokens.filter((t) => t.wordIndex >= 0);
 		expect(content[0].text).toBe("[UNK]");
 	});
 
 	it("splits punctuation into separate tokens with correct offsets", () => {
 		const tok = miniTokenizer();
 		const tokens = tok.tokenize("hello, world.");
-		const content = tokens.filter(t => t.wordIndex >= 0);
-		expect(content.map(t => t.text)).toEqual(["hello", ",", "world", "."]);
+		const content = tokens.filter((t) => t.wordIndex >= 0);
+		expect(content.map((t) => t.text)).toEqual(["hello", ",", "world", "."]);
 		expect(content[1].startOffset).toBe(5); // comma
 		expect(content[2].startOffset).toBe(7); // "world" after ", "
 	});
@@ -90,8 +90,8 @@ describe("BertTokenizer", () => {
 		const tok = miniTokenizer();
 		// "quickly" is NOT in vocab, but "quick" + "##ly" are
 		const tokens = tok.tokenize("quickly");
-		const content = tokens.filter(t => t.wordIndex >= 0);
-		expect(content.map(t => t.text)).toEqual(["quick", "##ly"]);
+		const content = tokens.filter((t) => t.wordIndex >= 0);
+		expect(content.map((t) => t.text)).toEqual(["quick", "##ly"]);
 		expect(content[1].isSubword).toBe(true);
 		// Both subwords share the parent word's span
 		expect(content[0].startOffset).toBe(0);
@@ -109,7 +109,7 @@ describe("BertTokenizer", () => {
 		const tok = miniTokenizer();
 		const original = "hello\n  world";
 		const tokens = tok.tokenize(original);
-		const content = tokens.filter(t => t.wordIndex >= 0);
+		const content = tokens.filter((t) => t.wordIndex >= 0);
 		const reconstructed = tok.reconstructFromOriginal(original, content);
 		expect(reconstructed).toBe("hello\n  world");
 	});
@@ -118,7 +118,7 @@ describe("BertTokenizer", () => {
 		const tok = miniTokenizer();
 		const original = "hello world test";
 		const tokens = tok.tokenize(original);
-		const content = tokens.filter(t => t.wordIndex >= 0);
+		const content = tokens.filter((t) => t.wordIndex >= 0);
 		// Keep only "hello" and "test" (skip "world")
 		const kept = [content[0], content[2]];
 		const reconstructed = tok.reconstructFromOriginal(original, kept);
@@ -308,8 +308,8 @@ describe("LLMLinguaMiddleware without ONNX", () => {
 	it("sync compress throws when useOnnx=true and not initialized", () => {
 		const mw = new LLMLinguaMiddleware(true);
 		const input = "word ".repeat(100);
-		expect(() =>
-			mw.compress(input, { targetRatio: 0.5, activationThreshold: 10 }),
-		).toThrow("ONNX runtime not initialized");
+		expect(() => mw.compress(input, { targetRatio: 0.5, activationThreshold: 10 })).toThrow(
+			"ONNX runtime not initialized",
+		);
 	});
 });

@@ -2,6 +2,23 @@ export type { Static, TSchema } from "@sinclair/typebox";
 export { Type } from "@sinclair/typebox";
 
 export * from "./api-registry.js";
+export type {
+	CacheLayer,
+	CachePolicy,
+	CacheRetention,
+	CacheUsageReport,
+	LayerBlock,
+	LayeredPayload,
+	RetentionResolveContext,
+} from "./cache/index.js";
+export {
+	CACHE_LAYER_ORDER,
+	defaultPolicy,
+	resolveRetention,
+	totalInputTokens,
+	usageToCacheReport,
+	validateLayers,
+} from "./cache/index.js";
 export * from "./env-api-keys.js";
 export * from "./models.js";
 export type { BedrockOptions } from "./providers/amazon-bedrock.js";
@@ -16,10 +33,21 @@ export type { OpenAICodexResponsesOptions } from "./providers/openai-codex-respo
 export type { OpenAICompletionsOptions } from "./providers/openai-completions.js";
 export type { OpenAIResponsesOptions } from "./providers/openai-responses.js";
 export * from "./providers/register-builtins.js";
+// WS15: Catwalk-style provider/model registry
+export * from "./registry/index.js";
 export * from "./stream.js";
 export * from "./types.js";
 export * from "./utils/event-stream.js";
 export * from "./utils/json-parse.js";
+// WS11: cave login dispatcher needs the OAuth provider registry helpers.
+export {
+	getOAuthProvider,
+	getOAuthProviderInfoList,
+	getOAuthProviders,
+	registerOAuthProvider,
+	resetOAuthProviders,
+	unregisterOAuthProvider,
+} from "./utils/oauth/index.js";
 export type {
 	OAuthAuthInfo,
 	OAuthCredentials,
@@ -30,26 +58,6 @@ export type {
 	OAuthProviderInfo,
 	OAuthProviderInterface,
 } from "./utils/oauth/types.js";
-// WS11: cave login dispatcher needs the OAuth provider registry helpers.
-export {
-	getOAuthProvider,
-	getOAuthProviders,
-	getOAuthProviderInfoList,
-	registerOAuthProvider,
-	resetOAuthProviders,
-	unregisterOAuthProvider,
-} from "./utils/oauth/index.js";
-export type {
-	CachePolicy,
-	CacheUsageReport,
-	CacheRetention,
-	CacheLayer,
-	LayerBlock,
-	LayeredPayload,
-	RetentionResolveContext,
-} from "./cache/index.js";
-export { defaultPolicy, resolveRetention, totalInputTokens, validateLayers, CACHE_LAYER_ORDER } from "./cache/index.js";
-export { usageToCacheReport } from "./cache/index.js";
 export * from "./utils/overflow.js";
 export * from "./utils/typebox-helpers.js";
 export * from "./utils/validation.js";

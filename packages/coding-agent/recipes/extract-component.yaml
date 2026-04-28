@@ -1,0 +1,24 @@
+goal: |
+  Extract the UI or logic block "{{component_name}}" from "{{source_file}}" into its own module.
+  1. Read {{source_file}} and identify the block to extract (function, class, JSX component, etc.).
+  2. Create a new file at the appropriate location following the project's naming conventions.
+  3. Move the identified code into the new file, exporting it properly.
+  4. Replace the original code in {{source_file}} with an import from the new module.
+  5. Run the type checker and tests to verify nothing broke.
+  6. Ensure the new component has at least a JSDoc / docstring.
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+
+effort: low
+
+inputs:
+  component_name:
+    description: "Name of the component or function to extract (e.g. UserAvatar)"
+    required: true
+  source_file:
+    description: "Path to the file that currently contains the code (e.g. src/pages/Profile.tsx)"
+    required: true

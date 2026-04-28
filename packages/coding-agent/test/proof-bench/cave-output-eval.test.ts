@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { parseJudgeJson, loadOutputPrompts } from "./cave-output-eval.js";
+import { describe, expect, it } from "vitest";
+import { loadOutputPrompts, parseJudgeJson } from "./cave-output-eval.js";
 
 describe("cave-output-eval.parseJudgeJson", () => {
 	it("parses a strict JSON response", () => {
@@ -19,7 +19,9 @@ describe("cave-output-eval.parseJudgeJson", () => {
 	});
 
 	it("tolerates code fences and leading prose", () => {
-		const r = parseJudgeJson('Here is the score:\n```json\n{"completeness": 6, "correctness": 6, "helpfulness": 6, "rationale": "ok"}\n```');
+		const r = parseJudgeJson(
+			'Here is the score:\n```json\n{"completeness": 6, "correctness": 6, "helpfulness": 6, "rationale": "ok"}\n```',
+		);
 		expect(r.overall).toBe(6);
 	});
 

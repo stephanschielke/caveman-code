@@ -6,15 +6,11 @@
  * manifest.json; preflight will refuse to publish if they diverge.
  */
 
-import type { Settings, CaveModeSettings } from "../../src/core/settings-manager.js";
+import type { CaveModeSettings, Settings } from "../../src/core/settings-manager.js";
 
 export type LiveConfigId = "A-baseline" | "D-output-only" | "F-cave-full" | "G-cave-ultra";
 
-export type ReplayConfigId =
-	| "replay-no-flint"
-	| "replay-no-stone"
-	| "replay-no-dedup"
-	| "replay-no-compaction";
+export type ReplayConfigId = "replay-no-flint" | "replay-no-stone" | "replay-no-dedup" | "replay-no-compaction";
 
 export type ConfigId = LiveConfigId | ReplayConfigId;
 

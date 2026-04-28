@@ -60,10 +60,7 @@ async function buildHub(ctx: SlashContext): Promise<agentMcp.McpHub> {
 async function runList(ctx: SlashContext): Promise<SlashResult> {
 	const loaded = agentMcp.loadMcpConfig(ctx.cwd);
 	if (loaded.errors.length > 0) {
-		return fail(
-			"MCP config errors:",
-			...loaded.errors.map((e) => `  ${e.path}: ${e.message}`),
-		);
+		return fail("MCP config errors:", ...loaded.errors.map((e) => `  ${e.path}: ${e.message}`));
 	}
 	if (loaded.servers.length === 0) {
 		const hint = `No MCP servers configured. Discovery checked:\n${loaded.sources

@@ -60,10 +60,13 @@ export function formatABResults(results: ABResult[]): string {
 
 	for (const result of results) {
 		const name = result.taskName.slice(0, 20).padEnd(20);
-		const tokenSav = `${result.tokenSavingsPercent > 0 ? "-" : "+"}${Math.abs(result.tokenSavingsPercent).toFixed(1)}%`.padStart(13);
-		const costSav = `${result.costSavingsPercent > 0 ? "-" : "+"}${Math.abs(result.costSavingsPercent).toFixed(1)}%`.padStart(12);
-		const quality =
-			result.qualityDelta === 0 ? "same" : result.qualityDelta > 0 ? "better" : "worse";
+		const tokenSav =
+			`${result.tokenSavingsPercent > 0 ? "-" : "+"}${Math.abs(result.tokenSavingsPercent).toFixed(1)}%`.padStart(
+				13,
+			);
+		const costSav =
+			`${result.costSavingsPercent > 0 ? "-" : "+"}${Math.abs(result.costSavingsPercent).toFixed(1)}%`.padStart(12);
+		const quality = result.qualityDelta === 0 ? "same" : result.qualityDelta > 0 ? "better" : "worse";
 
 		lines.push(`| ${name} | ${tokenSav} | ${costSav} | ${quality.padStart(7)} |`);
 
@@ -75,10 +78,8 @@ export function formatABResults(results: ABResult[]): string {
 		if (result.on.success) onPass++;
 	}
 
-	const avgTokenSavings =
-		totalOffTokens > 0 ? ((totalOffTokens - totalOnTokens) / totalOffTokens) * 100 : 0;
-	const avgCostSavings =
-		totalOffCost > 0 ? ((totalOffCost - totalOnCost) / totalOffCost) * 100 : 0;
+	const avgTokenSavings = totalOffTokens > 0 ? ((totalOffTokens - totalOnTokens) / totalOffTokens) * 100 : 0;
+	const avgCostSavings = totalOffCost > 0 ? ((totalOffCost - totalOnCost) / totalOffCost) * 100 : 0;
 
 	lines.push("|----------------------|---------------|--------------|---------|");
 	lines.push(

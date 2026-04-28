@@ -11,9 +11,7 @@ describe("model-download", () => {
 	});
 
 	it("modelPath joins dir + filename", () => {
-		expect(modelPath(LLMLINGUA2_MANIFEST)).toBe(
-			join(homedir(), ".cave", "models", LLMLINGUA2_MANIFEST.filename),
-		);
+		expect(modelPath(LLMLINGUA2_MANIFEST)).toBe(join(homedir(), ".cave", "models", LLMLINGUA2_MANIFEST.filename));
 	});
 
 	it("vocabPath joins dir + vocabFilename", () => {

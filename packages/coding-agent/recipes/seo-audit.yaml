@@ -1,0 +1,24 @@
+goal: |
+  Perform an SEO audit on the web application in the current repository.
+  1. Scan HTML / JSX / template files for missing or malformed:
+       - <title> and <meta name="description"> tags
+       - Open Graph (og:title, og:description, og:image) meta tags
+       - Twitter card meta tags
+       - Canonical <link> tags
+       - Structured data (JSON-LD or microdata)
+       - Alt text on <img> elements
+       - Heading hierarchy (H1→H2→H3 order)
+       - robots.txt and sitemap.xml presence
+  2. Produce a prioritised issue list (Critical / Important / Minor).
+  3. Fix Critical and Important issues directly in the source files.
+  4. Summarise all changes made and remaining Minor issues for manual review.
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+  - grep
+  - find
+
+effort: medium

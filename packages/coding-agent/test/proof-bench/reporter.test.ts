@@ -1,9 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { mkdtempSync, readFileSync, existsSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { emitResults, hashDatasets, hashManifest } from "./reporter.js";
+import { describe, expect, it } from "vitest";
 import type { ReporterInput } from "./reporter.js";
+import { emitResults, hashDatasets, hashManifest } from "./reporter.js";
 
 function baseInput(): ReporterInput {
 	return {
@@ -40,10 +40,34 @@ function baseInput(): ReporterInput {
 			},
 		],
 		replay: [
-			{ config: "replay-no-flint", sessionPath: "/tmp/s1.jsonl", tokensOriginal: 10000, tokensReplay: 6000, deltaPct: -40 },
-			{ config: "replay-no-stone", sessionPath: "/tmp/s1.jsonl", tokensOriginal: 10000, tokensReplay: 4500, deltaPct: -55 },
-			{ config: "replay-no-dedup", sessionPath: "/tmp/s1.jsonl", tokensOriginal: 10000, tokensReplay: 4800, deltaPct: -52 },
-			{ config: "replay-no-compaction", sessionPath: "/tmp/s1.jsonl", tokensOriginal: 10000, tokensReplay: 4400, deltaPct: -56 },
+			{
+				config: "replay-no-flint",
+				sessionPath: "/tmp/s1.jsonl",
+				tokensOriginal: 10000,
+				tokensReplay: 6000,
+				deltaPct: -40,
+			},
+			{
+				config: "replay-no-stone",
+				sessionPath: "/tmp/s1.jsonl",
+				tokensOriginal: 10000,
+				tokensReplay: 4500,
+				deltaPct: -55,
+			},
+			{
+				config: "replay-no-dedup",
+				sessionPath: "/tmp/s1.jsonl",
+				tokensOriginal: 10000,
+				tokensReplay: 4800,
+				deltaPct: -52,
+			},
+			{
+				config: "replay-no-compaction",
+				sessionPath: "/tmp/s1.jsonl",
+				tokensOriginal: 10000,
+				tokensReplay: 4400,
+				deltaPct: -56,
+			},
 		],
 		replayBaselines: [{ sessionPath: "/tmp/s1.jsonl", tokensOriginal: 10000, tokensAllLayersOn: 4000 }],
 		layerIsolation: [

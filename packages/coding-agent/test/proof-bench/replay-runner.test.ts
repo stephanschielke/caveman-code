@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import { writeFileSync, mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { replaySession, replayAll, replayAllLayersOnBaseline, replayAllWithBaseline } from "./replay-runner.js";
+import { beforeAll, describe, expect, it } from "vitest";
 import { REPLAY_CONFIGS } from "./ablation-matrix.js";
+import { replayAll, replayAllLayersOnBaseline, replayAllWithBaseline, replaySession } from "./replay-runner.js";
 
 /**
  * Synthesize a minimal session .jsonl file with known tool results so we can

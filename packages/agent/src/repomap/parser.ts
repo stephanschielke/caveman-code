@@ -5,18 +5,7 @@
 // downstream (symbol graph T-059, pagerank T-061) can build against a
 // stable interface.
 
-export type RepoLanguage =
-	| "ts"
-	| "js"
-	| "py"
-	| "go"
-	| "rs"
-	| "java"
-	| "c"
-	| "cpp"
-	| "rb"
-	| "php"
-	| "unknown";
+export type RepoLanguage = "ts" | "js" | "py" | "go" | "rs" | "java" | "c" | "cpp" | "rb" | "php" | "unknown";
 
 export interface ParsedSymbol {
 	file: string;
@@ -163,10 +152,7 @@ import * as treeSitter from "./tree-sitter.js";
 export { treeSitter };
 
 /** Async parser: tries tree-sitter first, falls back to regex. */
-export async function parseFileAsync(
-	file: string,
-	source: string,
-): Promise<ParsedFile> {
+export async function parseFileAsync(file: string, source: string): Promise<ParsedFile> {
 	const language = languageFor(file);
 	if (!isSupported(language)) {
 		return {

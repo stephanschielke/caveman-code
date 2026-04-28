@@ -65,8 +65,9 @@ describe("getEditFormat", () => {
 
 	it("includes a non-empty system prompt for every format", () => {
 		for (const name of Object.keys(ALL_EDIT_FORMATS)) {
-			expect(ALL_EDIT_FORMATS[name as keyof typeof ALL_EDIT_FORMATS].systemPromptFragment.length)
-				.toBeGreaterThan(20);
+			expect(ALL_EDIT_FORMATS[name as keyof typeof ALL_EDIT_FORMATS].systemPromptFragment.length).toBeGreaterThan(
+				20,
+			);
 		}
 	});
 });
@@ -136,7 +137,8 @@ export const newThing = 1;
 
 describe("parseDiffFenced", () => {
 	it("extracts SEARCH/REPLACE inside a fence", () => {
-		const reply = "Sure thing:\n\n```\nsrc/foo.ts\n<<<<<<< SEARCH\nconst x = 1;\n=======\nconst x = 2;\n>>>>>>> REPLACE\n```\n";
+		const reply =
+			"Sure thing:\n\n```\nsrc/foo.ts\n<<<<<<< SEARCH\nconst x = 1;\n=======\nconst x = 2;\n>>>>>>> REPLACE\n```\n";
 		const result = parseDiffFenced(reply);
 		expect(result.edits.length).toBe(1);
 		expect(result.edits[0].file).toBe("src/foo.ts");

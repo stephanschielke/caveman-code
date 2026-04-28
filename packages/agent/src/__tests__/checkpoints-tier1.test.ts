@@ -2,15 +2,15 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildPickerEntries,
+	type CheckpointDirMetadata,
 	fuzzyFilter,
 	PlanMode,
-	rewindSession,
-	selectGcCandidates,
-	ShadowCheckpoints,
-	sortByRecency,
-	type CheckpointDirMetadata,
 	type RewindAdapter,
+	rewindSession,
 	type SessionRow,
+	ShadowCheckpoints,
+	selectGcCandidates,
+	sortByRecency,
 } from "../checkpoints/shadow-git.js";
 
 function goodAdapter(): RewindAdapter {
@@ -181,9 +181,7 @@ describe("checkpoint GC", () => {
 	it("retentionDays is configurable", () => {
 		const now = Date.now();
 		const day = 24 * 60 * 60 * 1000;
-		const dirs: CheckpointDirMetadata[] = [
-			{ sessionId: "s", lastModifiedMs: now - 10 * day },
-		];
+		const dirs: CheckpointDirMetadata[] = [{ sessionId: "s", lastModifiedMs: now - 10 * day }];
 		expect(selectGcCandidates(dirs, { retentionDays: 7 }, now)).toHaveLength(1);
 		expect(selectGcCandidates(dirs, { retentionDays: 30 }, now)).toHaveLength(0);
 	});

@@ -13,18 +13,18 @@
 
 import type { CaveHookEvent, HookDispatchResult, HookStdin } from "./events.js";
 import { CAVE_HOOK_EVENTS, isCaveHookEvent } from "./events.js";
-import { HooksExecutor, type ExecutorOptions } from "./executor.js";
+import { type ExecutorOptions, HooksExecutor } from "./executor.js";
 import { HooksRegistry, type HooksRegistryOptions } from "./registry.js";
 
-export * from "./events.js";
-export { HooksRegistry, type HooksRegistryOptions, type MatchedHook } from "./registry.js";
-export { HooksExecutor, type ExecutorOptions } from "./executor.js";
 export {
-	buildDefaultCavememHooks,
 	buildCavememHooksSnippet,
+	buildDefaultCavememHooks,
 	CAVEMEM_HOOK_EVENT_NAMES,
 	type CavememHookOptions,
 } from "./cavemem-hooks.js";
+export * from "./events.js";
+export { type ExecutorOptions, HooksExecutor } from "./executor.js";
+export { HooksRegistry, type HooksRegistryOptions, type MatchedHook } from "./registry.js";
 
 export interface HooksManagerOptions {
 	executor?: ExecutorOptions;

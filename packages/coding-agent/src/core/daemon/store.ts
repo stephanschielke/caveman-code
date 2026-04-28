@@ -22,16 +22,12 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import Database from "better-sqlite3";
-import type {
-	MessageRecord,
-	Role,
-	SessionRecord,
-	SessionState,
-	WorkerRecord,
-} from "./protocol.js";
+import type { MessageRecord, Role, SessionRecord, SessionState, WorkerRecord } from "./protocol.js";
 
 export interface SessionStore {
-	createSession(input: Omit<SessionRecord, "createdAt" | "updatedAt" | "state"> & { state?: SessionState }): SessionRecord;
+	createSession(
+		input: Omit<SessionRecord, "createdAt" | "updatedAt" | "state"> & { state?: SessionState },
+	): SessionRecord;
 	getSession(id: string): SessionRecord | undefined;
 	listSessions(filter?: { state?: SessionState; limit?: number }): SessionRecord[];
 	updateSession(id: string, patch: Partial<SessionRecord>): SessionRecord | undefined;
@@ -203,9 +199,7 @@ export class SqliteSessionStore implements SessionStore {
 				.prepare(`SELECT * FROM sessions WHERE state = ? ORDER BY updated_at DESC LIMIT ?`)
 				.all(filter.state, limit) as SessionRow[];
 		} else {
-			rows = this.db
-				.prepare(`SELECT * FROM sessions ORDER BY updated_at DESC LIMIT ?`)
-				.all(limit) as SessionRow[];
+			rows = this.db.prepare(`SELECT * FROM sessions ORDER BY updated_at DESC LIMIT ?`).all(limit) as SessionRow[];
 		}
 		return rows.map(rowToSession);
 	}
@@ -256,9 +250,7 @@ export class SqliteSessionStore implements SessionStore {
 			)
 			.run(msg);
 		// Touch session updated_at so list ordering stays accurate.
-		this.db
-			.prepare(`UPDATE sessions SET updated_at = ? WHERE id = ?`)
-			.run(msg.createdAt, msg.sessionId);
+		this.db.prepare(`UPDATE sessions SET updated_at = ? WHERE id = ?`).run(msg.createdAt, msg.sessionId);
 	}
 
 	getTranscript(sessionId: string): MessageRecord[] {
@@ -296,16 +288,12 @@ export class SqliteSessionStore implements SessionStore {
 	}
 
 	listWorkers(): WorkerRecord[] {
-		const rows = this.db
-			.prepare(`SELECT * FROM workers ORDER BY registered_at DESC`)
-			.all() as WorkerRow[];
+		const rows = this.db.prepare(`SELECT * FROM workers ORDER BY registered_at DESC`).all() as WorkerRow[];
 		return rows.map(rowToWorker);
 	}
 
 	getWorker(name: string): WorkerRecord | undefined {
-		const row = this.db.prepare(`SELECT * FROM workers WHERE name = ?`).get(name) as
-			| WorkerRow
-			| undefined;
+		const row = this.db.prepare(`SELECT * FROM workers WHERE name = ?`).get(name) as WorkerRow | undefined;
 		return row ? rowToWorker(row) : undefined;
 	}
 

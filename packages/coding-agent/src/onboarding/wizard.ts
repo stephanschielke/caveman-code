@@ -16,7 +16,7 @@ import { createInterface, type Interface as ReadlineInterface } from "node:readl
 import { getEnvApiKey } from "@cave/ai";
 import chalk from "chalk";
 import { VERSION } from "../config.js";
-import { SettingsManager } from "../core/settings-manager.js";
+import type { SettingsManager } from "../core/settings-manager.js";
 
 /**
  * Providers we surface in the wizard, ordered by user preference.
@@ -32,14 +32,16 @@ const WIZARD_PROVIDERS: Array<{
 	{ id: "openai", label: "OpenAI (GPT)", envHint: "OPENAI_API_KEY", defaultModel: "gpt-5" },
 	{ id: "google", label: "Google (Gemini)", envHint: "GEMINI_API_KEY", defaultModel: "gemini-2.5-pro" },
 	{ id: "groq", label: "Groq (fast inference)", envHint: "GROQ_API_KEY", defaultModel: "llama-3.3-70b-versatile" },
-	{ id: "openrouter", label: "OpenRouter (gateway)", envHint: "OPENROUTER_API_KEY", defaultModel: "anthropic/claude-sonnet-4-5" },
+	{
+		id: "openrouter",
+		label: "OpenRouter (gateway)",
+		envHint: "OPENROUTER_API_KEY",
+		defaultModel: "anthropic/claude-sonnet-4-5",
+	},
 ];
 
 export type ThemeAnswer = "dark" | "light" | "auto";
-export type AuthAnswer =
-	| { type: "use-env"; provider: string }
-	| { type: "configure-later" }
-	| { type: "skip" };
+export type AuthAnswer = { type: "use-env"; provider: string } | { type: "configure-later" } | { type: "skip" };
 
 export interface WizardAnswers {
 	theme: ThemeAnswer;
@@ -150,10 +152,7 @@ export function shouldRunOnboarding(settings: SettingsManager, io: WizardIO = DE
  * Compose the wizard. Pure-ish: reads io, returns the chosen answers, and
  * persists them via the provided SettingsManager. No network. No model loads.
  */
-export async function runOnboarding(
-	settings: SettingsManager,
-	io: WizardIO = DEFAULT_IO,
-): Promise<WizardAnswers> {
+export async function runOnboarding(settings: SettingsManager, io: WizardIO = DEFAULT_IO): Promise<WizardAnswers> {
 	const out = io.stdout;
 	const rl = io.prompt ? undefined : createInterface({ input: io.stdin, output: io.stdout });
 	const promptFn =
@@ -216,7 +215,12 @@ export async function runOnboarding(
 			const provider = WIZARD_PROVIDERS.find((p) => p.id === chosenProvider);
 			if (provider) {
 				const choices = [
-					{ key: "1", label: `${provider.defaultModel} (recommended default)`, value: provider.defaultModel, default: true },
+					{
+						key: "1",
+						label: `${provider.defaultModel} (recommended default)`,
+						value: provider.defaultModel,
+						default: true,
+					},
 					{ key: "2", label: "skip — pick later via /model", value: "" },
 				];
 				const picked = await askChoice(ctx, `3) Default model for ${provider.label}`, choices);
@@ -246,7 +250,12 @@ export async function runOnboarding(
 
 		write(out, "\n");
 		write(out, chalk.green("  All set. Press Enter to continue to the prompt.\n"));
-		write(out, chalk.dim(`  Saved to ${settings.constructor.name === "SettingsManager" ? "~/.cave/agent/settings.json" : "settings"}.\n`));
+		write(
+			out,
+			chalk.dim(
+				`  Saved to ${settings.constructor.name === "SettingsManager" ? "~/.cave/agent/settings.json" : "settings"}.\n`,
+			),
+		);
 
 		return answers;
 	} finally {

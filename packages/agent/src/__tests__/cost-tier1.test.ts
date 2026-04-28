@@ -1,13 +1,6 @@
 // T-083..T-092
 import { describe, expect, it } from "vitest";
-import {
-	CostCapTracker,
-	CostPanel,
-	ProvenanceRegistry,
-	renderTrace,
-	replay,
-	type TraceEvent,
-} from "../cost/index.js";
+import { CostCapTracker, CostPanel, ProvenanceRegistry, renderTrace, replay, type TraceEvent } from "../cost/index.js";
 
 describe("CostCapTracker", () => {
 	it("fires cost_cap_turn when per-turn cap exceeded", () => {
@@ -80,10 +73,22 @@ describe("CostPanel", () => {
 
 describe("trace viewer", () => {
 	const events: TraceEvent[] = [
-		{ type: "llm_call", turn: 0, seq: 0, ts: 1, payload: { model: "opus", inputTokens: 10, outputTokens: 5, dollars: 0.01 } },
+		{
+			type: "llm_call",
+			turn: 0,
+			seq: 0,
+			ts: 1,
+			payload: { model: "opus", inputTokens: 10, outputTokens: 5, dollars: 0.01 },
+		},
 		{ type: "tool_call", turn: 0, seq: 1, ts: 2, payload: { tool: "read", cacheState: "miss" } },
 		{ type: "tool_cache_hit", turn: 0, seq: 2, ts: 3, payload: { tool: "read", cacheState: "hit" } },
-		{ type: "llm_call", turn: 1, seq: 3, ts: 4, payload: { model: "sonnet", inputTokens: 20, outputTokens: 3, dollars: 0.002 } },
+		{
+			type: "llm_call",
+			turn: 1,
+			seq: 3,
+			ts: 4,
+			payload: { model: "sonnet", inputTokens: 20, outputTokens: 3, dollars: 0.002 },
+		},
 	];
 
 	it("renders events in timestamp order", () => {

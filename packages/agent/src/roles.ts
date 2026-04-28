@@ -18,9 +18,7 @@ export interface RoleTagged<T = unknown> {
 
 export function requireRole<T>(value: { role?: unknown; payload: T }): RoleTagged<T> {
 	if (!isRole(value.role)) {
-		throw new Error(
-			`roles: outbound call missing or invalid role (got ${JSON.stringify(value.role)})`,
-		);
+		throw new Error(`roles: outbound call missing or invalid role (got ${JSON.stringify(value.role)})`);
 	}
 	return { role: value.role, payload: value.payload };
 }

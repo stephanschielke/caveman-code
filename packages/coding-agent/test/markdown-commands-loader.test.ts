@@ -9,11 +9,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-	expandMarkdownCommand,
-	loadMarkdownCommands,
-	watchMarkdownCommands,
-} from "../src/core/slash-commands.js";
+import { expandMarkdownCommand, loadMarkdownCommands, watchMarkdownCommands } from "../src/core/slash-commands.js";
 
 describe("WS5 slash-commands — discovery loader", () => {
 	let cwd: string;
@@ -38,21 +34,9 @@ describe("WS5 slash-commands — discovery loader", () => {
 	});
 
 	it("loads commands from project, user, and bundled-defaults dirs", () => {
-		writeFileSync(
-			join(projectDir, "p1.md"),
-			"---\nname: p1\ndescription: from project\n---\nbody-p1",
-			"utf-8",
-		);
-		writeFileSync(
-			join(userDir, "u1.md"),
-			"---\nname: u1\ndescription: from user\n---\nbody-u1",
-			"utf-8",
-		);
-		writeFileSync(
-			join(bundledDir, "b1.md"),
-			"---\nname: b1\ndescription: from bundled\n---\nbody-b1",
-			"utf-8",
-		);
+		writeFileSync(join(projectDir, "p1.md"), "---\nname: p1\ndescription: from project\n---\nbody-p1", "utf-8");
+		writeFileSync(join(userDir, "u1.md"), "---\nname: u1\ndescription: from user\n---\nbody-u1", "utf-8");
+		writeFileSync(join(bundledDir, "b1.md"), "---\nname: b1\ndescription: from bundled\n---\nbody-b1", "utf-8");
 
 		const { commands, diagnostics } = loadMarkdownCommands({
 			cwd,
@@ -68,9 +52,17 @@ describe("WS5 slash-commands — discovery loader", () => {
 
 	it("prefers project over user over bundled defaults on collision", () => {
 		// Same command name, different bodies. Project should win.
-		writeFileSync(join(projectDir, "shared.md"), "---\nname: shared\ndescription: project-version\n---\nproject", "utf-8");
+		writeFileSync(
+			join(projectDir, "shared.md"),
+			"---\nname: shared\ndescription: project-version\n---\nproject",
+			"utf-8",
+		);
 		writeFileSync(join(userDir, "shared.md"), "---\nname: shared\ndescription: user-version\n---\nuser", "utf-8");
-		writeFileSync(join(bundledDir, "shared.md"), "---\nname: shared\ndescription: bundled-version\n---\nbundled", "utf-8");
+		writeFileSync(
+			join(bundledDir, "shared.md"),
+			"---\nname: shared\ndescription: bundled-version\n---\nbundled",
+			"utf-8",
+		);
 
 		const { commands, diagnostics } = loadMarkdownCommands({
 			cwd,
@@ -154,11 +146,7 @@ describe("WS5 slash-commands — discovery loader", () => {
 		});
 
 		try {
-			writeFileSync(
-				join(projectDir, "new-cmd.md"),
-				"---\nname: new-cmd\ndescription: hi\n---\nbody",
-				"utf-8",
-			);
+			writeFileSync(join(projectDir, "new-cmd.md"), "---\nname: new-cmd\ndescription: hi\n---\nbody", "utf-8");
 
 			// Wait for debounce + a generous fs.watch delay.
 			const start = Date.now();
@@ -227,11 +215,7 @@ describe("WS5 slash-commands — expansion", () => {
 	});
 
 	it("substitutes a failed shell with an inline error marker", async () => {
-		writeFileSync(
-			join(projectDir, "boom.md"),
-			"---\nname: boom\ndescription: x\n---\nresult=`!exit 17`",
-			"utf-8",
-		);
+		writeFileSync(join(projectDir, "boom.md"), "---\nname: boom\ndescription: x\n---\nresult=`!exit 17`", "utf-8");
 		const { commands } = loadMarkdownCommands({ cwd, agentDir });
 		const cmd = commands.find((c) => c.name === "boom")!;
 		const result = await expandMarkdownCommand(cmd, { cwd });

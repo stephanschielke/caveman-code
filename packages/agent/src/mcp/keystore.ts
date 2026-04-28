@@ -7,7 +7,7 @@
 // safe interim and exposes the same `KeyStore` interface so the swap is a
 // 5-line patch in `cave mcp login`.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 

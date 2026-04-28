@@ -1,8 +1,8 @@
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadSweBenchFromFile } from "../bench/swe-bench-dataset.js";
-import { writeFile, unlink, mkdir } from "node:fs/promises";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 
 describe("swe-bench-dataset", () => {
 	it("loads instances from JSONL file", async () => {

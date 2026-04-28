@@ -1,0 +1,23 @@
+goal: |
+  Add tests for "{{target}}" using the project's existing test framework.
+  1. Identify the test framework in use (Jest, Vitest, Mocha, pytest, etc.) and the
+     test file naming convention (*.test.ts, *_test.go, test_*.py, …).
+  2. For each exported function / class in {{target}}, write unit tests covering:
+       - the happy path
+       - boundary conditions and edge cases
+       - error / exception paths
+  3. Run the tests and fix any failures.
+  4. Report the final coverage if the project has a coverage reporter configured.
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+
+effort: medium
+
+inputs:
+  target:
+    description: "File or module to write tests for (e.g. src/utils/parser.ts)"
+    required: true

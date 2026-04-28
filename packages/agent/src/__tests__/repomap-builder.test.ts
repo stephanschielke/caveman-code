@@ -1,14 +1,9 @@
 // WS8: repomap builder + personalized PageRank tests.
 
 import { describe, expect, it } from "vitest";
-import {
-	buildRepomap,
-	dynamicMapTokens,
-	pagerank,
-	personalizationFromChat,
-} from "../repomap/index.js";
-import { buildSymbolGraph } from "../repomap/symbol-graph.js";
+import { buildRepomap, dynamicMapTokens, pagerank, personalizationFromChat } from "../repomap/index.js";
 import { parseFile } from "../repomap/parser.js";
+import { buildSymbolGraph } from "../repomap/symbol-graph.js";
 
 const FILES = [
 	{
@@ -72,8 +67,7 @@ describe("buildRepomap", () => {
 			chatState: { addedFiles: ["/repo/baz.ts"] },
 		});
 		// Find the first symbol from baz.ts in each ranking.
-		const findBaz = (r: typeof baseline.ranked) =>
-			r.findIndex((s) => s.node.file === "/repo/baz.ts");
+		const findBaz = (r: typeof baseline.ranked) => r.findIndex((s) => s.node.file === "/repo/baz.ts");
 		const baseIdx = findBaz(baseline.ranked);
 		const persIdx = findBaz(personalized.ranked);
 		expect(persIdx).toBeLessThanOrEqual(baseIdx);
@@ -142,8 +136,6 @@ describe("dynamicMapTokens", () => {
 	});
 
 	it("respects custom budgets", () => {
-		expect(
-			dynamicMapTokens({ hasFilesInChat: false, defaultBudget: 500, expandedBudget: 5000 }),
-		).toBe(5000);
+		expect(dynamicMapTokens({ hasFilesInChat: false, defaultBudget: 500, expandedBudget: 5000 })).toBe(5000);
 	});
 });

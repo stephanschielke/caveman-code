@@ -36,11 +36,7 @@ export class CostCapTracker {
 		this.sessionTotal += entry.dollarsEstimated;
 
 		const { perTurnDollars, perSessionDollars } = this.config;
-		if (
-			perTurnDollars !== undefined &&
-			turnTotal >= perTurnDollars &&
-			!this.turnCapTriggered.has(entry.turnIndex)
-		) {
+		if (perTurnDollars !== undefined && turnTotal >= perTurnDollars && !this.turnCapTriggered.has(entry.turnIndex)) {
 			this.turnCapTriggered.add(entry.turnIndex);
 			this.pendingTurnCap = entry.turnIndex;
 			this.confirmationRequired = true;
@@ -54,11 +50,7 @@ export class CostCapTracker {
 			}
 			return true;
 		}
-		if (
-			perSessionDollars !== undefined &&
-			this.sessionTotal >= perSessionDollars &&
-			!this.sessionCapTriggered
-		) {
+		if (perSessionDollars !== undefined && this.sessionTotal >= perSessionDollars && !this.sessionCapTriggered) {
 			this.sessionCapTriggered = true;
 			for (const l of this.listeners) {
 				l({ type: "cost_cap_session", dollars: this.sessionTotal, cap: perSessionDollars });

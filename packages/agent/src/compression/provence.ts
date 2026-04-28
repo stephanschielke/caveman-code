@@ -24,9 +24,7 @@ export function rerank(input: RerankerInput): RerankerOutput {
 		.map((chunk) => ({ chunk, score: scoreChunk(chunk, input.query) }))
 		.sort((a, b) => b.score - a.score || a.chunk.localeCompare(b.chunk));
 	const keepCount = Math.max(1, Math.floor(input.chunks.length * input.keepRatio));
-	const kept = scored
-		.slice(0, keepCount)
-		.filter((s) => s.score >= input.dropBelow);
+	const kept = scored.slice(0, keepCount).filter((s) => s.score >= input.dropBelow);
 	return { kept, dropped: input.chunks.length - kept.length };
 }
 

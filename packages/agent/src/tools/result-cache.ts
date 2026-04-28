@@ -49,8 +49,7 @@ export function keyHash(key: CacheKey): string {
 
 // T-030: normalization — ANSI strip, path rewrite, ISO timestamp redaction.
 const ANSI_RE = /\u001B\[[0-9;]*[A-Za-z]/g;
-const ISO_RE =
-	/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\b/g;
+const ISO_RE = /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\b/g;
 
 export function normalizeToolOutput(output: string, workdir: string): string {
 	let out = output.replace(ANSI_RE, "");

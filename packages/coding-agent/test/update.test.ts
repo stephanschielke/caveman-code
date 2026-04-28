@@ -56,11 +56,7 @@ describe("WS11 self-update logic", () => {
 
 		it("returns undefined when API call fails", async () => {
 			const fakeFetch = async () => new Response("err", { status: 500 });
-			const r = await resolveRemoteRelease(
-				"stable",
-				"https://api.github.com",
-				fakeFetch as unknown as typeof fetch,
-			);
+			const r = await resolveRemoteRelease("stable", "https://api.github.com", fakeFetch as unknown as typeof fetch);
 			expect(r).toBeUndefined();
 		});
 
@@ -126,8 +122,7 @@ describe("WS11 self-update logic", () => {
 			const s = settings();
 			s.setUpdateLastCheckedAt(new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString());
 			s.setUpdateLastNotifiedVersion("v999.0.0");
-			const fakeFetch = async () =>
-				new Response(JSON.stringify({ tag_name: "v999.0.0" }), { status: 200 });
+			const fakeFetch = async () => new Response(JSON.stringify({ tag_name: "v999.0.0" }), { status: 200 });
 			const r = await maybeNotifyUpdateAvailable(s, { fetchImpl: fakeFetch as unknown as typeof fetch });
 			expect(r).toBeUndefined();
 		});

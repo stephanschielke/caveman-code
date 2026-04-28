@@ -14,6 +14,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { SessionStore } from "../src/core/daemon/index.js";
 import {
 	CaveClient,
 	createDefaultRunnerFactory,
@@ -21,7 +22,6 @@ import {
 	openStore,
 	startDaemon,
 } from "../src/core/daemon/index.js";
-import type { SessionStore } from "../src/core/daemon/index.js";
 
 interface Fixture {
 	tmpDir: string;
@@ -107,9 +107,7 @@ describe("WS9 daemon — REST routing", () => {
 	});
 
 	it("rejects unknown routes with 404", async () => {
-		await expect(
-			fetch(`http://127.0.0.1:${f.handle.port}/v1/nope`).then((r) => r.status),
-		).resolves.toBe(404);
+		await expect(fetch(`http://127.0.0.1:${f.handle.port}/v1/nope`).then((r) => r.status)).resolves.toBe(404);
 	});
 });
 

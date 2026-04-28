@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 import { loadMicrobenchLite } from "./live-runner.js";
 
 // parseCaveJsonOutput isn't exported directly; we cover it via a quick round-trip

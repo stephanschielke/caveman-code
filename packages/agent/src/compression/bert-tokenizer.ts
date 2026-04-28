@@ -319,11 +319,15 @@ function isWhitespace(ch: string): boolean {
 
 function isPunctuation(ch: string): boolean {
 	const code = ch.charCodeAt(0);
-	if ((code >= 33 && code <= 47) || (code >= 58 && code <= 64) ||
-		(code >= 91 && code <= 96) || (code >= 123 && code <= 126)) {
+	if (
+		(code >= 33 && code <= 47) ||
+		(code >= 58 && code <= 64) ||
+		(code >= 91 && code <= 96) ||
+		(code >= 123 && code <= 126)
+	) {
 		return true;
 	}
-	if (code >= 0x2000 && code <= 0x206F) return true;
-	if (code >= 0x3000 && code <= 0x303F) return true;
+	if (code >= 0x2000 && code <= 0x206f) return true;
+	if (code >= 0x3000 && code <= 0x303f) return true;
 	return false;
 }

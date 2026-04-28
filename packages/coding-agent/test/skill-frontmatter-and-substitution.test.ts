@@ -8,15 +8,12 @@
  * - `substituteSkillVariables` honours every variable shape documented in
  *   the WS5 plan.
  */
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-	loadSkillsFromDir,
-	substituteSkillVariables,
-} from "../src/core/skills.js";
+import { loadSkillsFromDir, substituteSkillVariables } from "../src/core/skills.js";
 
 describe("WS5 skills — frontmatter parser", () => {
 	let dir: string;
@@ -134,15 +131,12 @@ describe("WS5 skills — substitution engine", () => {
 	});
 
 	it("expands the cave-specific named variables", () => {
-		const out = substituteSkillVariables(
-			"sid=${CAVE_SESSION_ID} dir=${CAVE_SKILL_DIR} effort=${CAVE_EFFORT}",
-			{
-				cwd: process.cwd(),
-				sessionId: "abc-123",
-				skillDir: "/skills/foo",
-				effort: "high",
-			},
-		);
+		const out = substituteSkillVariables("sid=${CAVE_SESSION_ID} dir=${CAVE_SKILL_DIR} effort=${CAVE_EFFORT}", {
+			cwd: process.cwd(),
+			sessionId: "abc-123",
+			skillDir: "/skills/foo",
+			effort: "high",
+		});
 		expect(out).toBe("sid=abc-123 dir=/skills/foo effort=high");
 	});
 
@@ -159,10 +153,7 @@ describe("WS5 skills — substitution engine", () => {
 	});
 
 	it("leaves truly-unknown ${NAME} variables in place", () => {
-		const out = substituteSkillVariables(
-			"missing=${NEVER_DEFINED_VAR_xyz_42}",
-			{ cwd: process.cwd() },
-		);
+		const out = substituteSkillVariables("missing=${NEVER_DEFINED_VAR_xyz_42}", { cwd: process.cwd() });
 		expect(out).toBe("missing=${NEVER_DEFINED_VAR_xyz_42}");
 	});
 

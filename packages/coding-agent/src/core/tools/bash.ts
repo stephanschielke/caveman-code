@@ -15,6 +15,8 @@ import type { ToolDefinition, ToolRenderResultOptions } from "../extensions/type
 import { getTextOutput, invalidArgText, str } from "./render-utils.js";
 import { wrapToolDefinition } from "./tool-definition-wrapper.js";
 import { DEFAULT_MAX_BYTES, DEFAULT_MAX_LINES, formatSize, type TruncationResult, truncateTail } from "./truncate.js";
+// WS17: pre-mutate snapshot hook
+import type { PreMutateHook } from "./write.js";
 
 /**
  * Generate a unique temp file path for bash output.
@@ -147,6 +149,10 @@ export interface BashToolOptions {
 	commandPrefix?: string;
 	/** Hook to adjust command, cwd, or env before execution. May return a Promise. */
 	spawnHook?: BashSpawnHook;
+	/** WS17: optional pre-mutate checkpoint hook */
+	preMutateHook?: PreMutateHook;
+	/** WS17: session ID for checkpoint tagging */
+	sessionId?: string;
 }
 
 const BASH_PREVIEW_LINES = 5;
@@ -266,6 +272,9 @@ export function createBashToolDefinition(
 	const ops = options?.operations ?? createLocalBashOperations();
 	const commandPrefix = options?.commandPrefix;
 	const spawnHook = options?.spawnHook;
+	// WS17: pre-mutate snapshot hook
+	const preMutateHook = options?.preMutateHook;
+	const sessionId = options?.sessionId ?? "default";
 	return {
 		name: "bash",
 		label: "bash",
@@ -279,6 +288,10 @@ export function createBashToolDefinition(
 			onUpdate?,
 			_ctx?,
 		) {
+			// WS17: pre-mutate snapshot — fire-and-forget, never blocks bash execution
+			if (preMutateHook) {
+				preMutateHook.preToolSnapshot("bash", sessionId).catch(() => {});
+			}
 			const resolvedCommand = commandPrefix ? `${commandPrefix}\n${command}` : command;
 			const spawnContext = await resolveSpawnContext(resolvedCommand, cwd, spawnHook);
 			if (onUpdate) {

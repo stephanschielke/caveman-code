@@ -38,17 +38,13 @@
  *   `!`cmd`` runs in cwd at expansion time; stdout replaces the literal.
  */
 
-import { type Dirent, existsSync, readdirSync, readFileSync, statSync, watch, type FSWatcher } from "fs";
+import { type Dirent, existsSync, type FSWatcher, readdirSync, readFileSync, statSync, watch } from "fs";
 import { homedir } from "os";
 import { basename, isAbsolute, join, resolve } from "path";
 import { CONFIG_DIR_NAME, getAgentDir } from "../config.js";
 import { parseFrontmatter } from "../utils/frontmatter.js";
 import type { ResourceDiagnostic } from "./diagnostics.js";
-import {
-	applyInlineShellPreprocessing,
-	substituteSkillVariables,
-	type SkillExpandContext,
-} from "./skills.js";
+import { applyInlineShellPreprocessing, type SkillExpandContext, substituteSkillVariables } from "./skills.js";
 import { createSyntheticSourceInfo, type SourceInfo } from "./source-info.js";
 
 export type SlashCommandSource = "extension" | "prompt" | "skill" | "markdown";
@@ -97,7 +93,21 @@ export const BUILTIN_SLASH_COMMANDS: ReadonlyArray<BuiltinSlashCommand> = [
 			"Memory layer (cavemem-backed). Subcommands: search, save, show, forget, export, consolidate, sync, off, on, config.",
 	},
 	{ name: "repomap", description: "Show the Aider-style PageRank repo map (WS8). /repomap help for subcommands." },
-	{ name: "architect", description: "Toggle architect/editor split chat mode (WS8). /architect help for subcommands." },
+	{
+		name: "architect",
+		description: "Toggle architect/editor split chat mode (WS8). /architect help for subcommands.",
+	},
+	{
+		name: "recipe",
+		description: "Run a Goose-style YAML recipe in the current session (WS14). /recipe help for subcommands.",
+	},
+	{
+		name: "tokens",
+		description: "Show token usage by source bucket (system, repomap, chat-history, files, tool-results) (WS19).",
+	},
+	{ name: "cost", description: "Show session cost + today + this-week totals (WS19)." },
+	{ name: "checkpoint", description: "Create a labeled shadow-git snapshot (WS17). /checkpoint <name>" },
+	{ name: "rollback", description: "Restore from a shadow-git snapshot (WS17). /rollback [N] [--file <path>] | list" },
 	{ name: "quit", description: "Quit pi" },
 ];
 
@@ -468,33 +478,51 @@ export function findBundledCommandsDir(packageDir: string): string | undefined {
 // =============================================================================
 
 export {
-	runHooksCommand,
-	listRecipes as listHookRecipes,
-	buildRegistryFromSettings as buildHooksRegistryFromSettings,
 	buildManagerFromSettings as buildHooksManagerFromSettings,
+	buildRegistryFromSettings as buildHooksRegistryFromSettings,
+	listRecipes as listHookRecipes,
+	runHooksCommand,
 } from "./slash-commands/hooks.js";
-
-// WS3: re-export the sandbox command handlers for CLI dispatch.
-export { handleSandboxCommand, isSandboxFlagEnabled } from "./slash-commands/sandbox.js";
+export type { MemorySlashContext, MemorySlashResult } from "./slash-commands/memory.js";
 
 // WS7: re-export the memory command handlers for CLI dispatch.
 export {
-	runMemorySlashCommand,
-	parseMemorySlash,
 	buildSessionStartPrelude,
+	parseMemorySlash,
+	runMemorySlashCommand,
 } from "./slash-commands/memory.js";
-export type { MemorySlashContext, MemorySlashResult } from "./slash-commands/memory.js";
+// WS3: re-export the sandbox command handlers for CLI dispatch.
+export { handleSandboxCommand, isSandboxFlagEnabled } from "./slash-commands/sandbox.js";
 
 // =============================================================================
 // /repomap and /architect (WS8)
 // =============================================================================
 
-export {
-	runRepomapCommand,
-	emptyChatState as emptyRepomapChatState,
-	collectSourceFiles as collectRepomapSourceFiles,
-} from "./slash-commands/repomap.js";
-export type { RepomapChatState, RepomapCommandIO, RepomapCommandResult } from "./slash-commands/repomap.js";
-
-export { runArchitectCommand } from "./slash-commands/architect.js";
 export type { ArchitectCommandIO, ArchitectCommandResult } from "./slash-commands/architect.js";
+export { runArchitectCommand } from "./slash-commands/architect.js";
+export type { RepomapChatState, RepomapCommandIO, RepomapCommandResult } from "./slash-commands/repomap.js";
+export {
+	collectSourceFiles as collectRepomapSourceFiles,
+	emptyChatState as emptyRepomapChatState,
+	runRepomapCommand,
+} from "./slash-commands/repomap.js";
+
+// =============================================================================
+// /recipe (WS14)
+// =============================================================================
+
+export type { RecipeSlashCommandIO, RecipeSlashCommandResult } from "./slash-commands/recipe.js";
+export {
+	parseRecipeSlash,
+	RECIPE_SLASH_COMMAND,
+	runRecipeSlashCommand,
+} from "./slash-commands/recipe.js";
+
+// =============================================================================
+// /tokens and /cost (WS19)
+// =============================================================================
+
+export type { CostCommandContext, CostCommandResult } from "./slash-commands/cost.js";
+export { runCostCommand } from "./slash-commands/cost.js";
+export type { TokensCommandContext, TokensCommandResult } from "./slash-commands/tokens.js";
+export { runTokensCommand } from "./slash-commands/tokens.js";

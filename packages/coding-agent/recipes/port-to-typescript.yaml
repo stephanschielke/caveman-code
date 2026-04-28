@@ -1,0 +1,22 @@
+goal: |
+  Port the JavaScript files in "{{target}}" to TypeScript.
+  1. Check whether TypeScript and a tsconfig already exist; install / scaffold if not.
+  2. Rename .js → .ts (or .jsx → .tsx) files one at a time.
+  3. Add explicit types for function parameters, return values, and exported symbols.
+  4. Resolve any type errors reported by `tsc --noEmit`.
+  5. Ensure the build and test commands still pass after the migration.
+  6. Do NOT add `any` types as a workaround — use proper types or `unknown`.
+
+tools:
+  - read
+  - bash
+  - edit
+  - write
+
+effort: medium
+
+inputs:
+  target:
+    description: "Path or glob of JS files to migrate (e.g. src/, src/utils/*.js)"
+    required: false
+    default: "src/"

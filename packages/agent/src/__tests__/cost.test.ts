@@ -1,11 +1,6 @@
 // T-034, T-035, T-036, T-037
 import { describe, expect, it } from "vitest";
-import {
-	createInMemoryTraceSink,
-	DEFAULT_PRICING,
-	PricingResolver,
-	TraceEmitter,
-} from "../cost/index.js";
+import { createInMemoryTraceSink, DEFAULT_PRICING, PricingResolver, TraceEmitter } from "../cost/index.js";
 
 describe("PricingResolver", () => {
 	it("knows default claude-opus-4-6 pricing", () => {

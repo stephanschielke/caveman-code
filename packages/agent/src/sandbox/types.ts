@@ -54,11 +54,7 @@ export interface EscapeRequest {
 export type EscapeConfirm = (req: EscapeRequest) => boolean;
 
 /** Merge base allow with a runtime escape after interactive confirm. */
-export function applyEscape(
-	base: SandboxAllowConfig,
-	req: EscapeRequest,
-	confirm: EscapeConfirm,
-): SandboxAllowConfig {
+export function applyEscape(base: SandboxAllowConfig, req: EscapeRequest, confirm: EscapeConfirm): SandboxAllowConfig {
 	if (!confirm(req)) return base;
 	const merged: SandboxAllowConfig = { ...base };
 	if (req.kind === "write" && req.path) {

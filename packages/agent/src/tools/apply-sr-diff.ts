@@ -54,11 +54,7 @@ function findAllExact(haystack: string, needle: string): ApplyMatch[] {
 }
 
 /** Perform an exact-match search/replace on `content`. Must match exactly once. */
-export function applySrDiff(
-	content: string,
-	search: string,
-	replace: string,
-): ApplyResult {
+export function applySrDiff(content: string, search: string, replace: string): ApplyResult {
 	const matches = findAllExact(content, search);
 	if (matches.length === 0) {
 		return { status: "no_match", reason: "no_match" };

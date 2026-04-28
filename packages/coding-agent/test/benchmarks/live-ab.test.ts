@@ -10,13 +10,13 @@
  * Run: ANTHROPIC_API_KEY=sk-... npx vitest run test/benchmarks/live-ab.bench.ts
  */
 
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { afterAll, describe, it, expect } from "vitest";
-import { type ABResult, type TaskResult, formatABResults } from "./live-ab-report.js";
+import { afterAll, describe, expect, it } from "vitest";
+import { type ABResult, formatABResults, type TaskResult } from "./live-ab-report.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const TASKS_DIR = join(__dirname, "tasks");
@@ -25,11 +25,7 @@ const TASKS_DIR = join(__dirname, "tasks");
 // Gate: skip if no API key
 // ============================================================================
 
-const HAS_API_KEY = !!(
-	process.env.ANTHROPIC_API_KEY ||
-	process.env.OPENAI_API_KEY ||
-	process.env.GOOGLE_API_KEY
-);
+const HAS_API_KEY = !!(process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.GOOGLE_API_KEY);
 
 // ============================================================================
 // Helpers
@@ -101,19 +97,14 @@ function runAgent(
 	// Use print mode (-p) for single-shot execution
 	// Use --output json to capture events including usage data
 	const caveCmd = process.env.CAVE_BIN ?? "cave";
-	const args = [
-		caveCmd,
-		"-p",
-		JSON.stringify(prompt),
-		"--output", "json",
-	];
+	const args = [caveCmd, "-p", JSON.stringify(prompt), "--output", "json"];
 
 	if (caveMode) {
 		args.push("--cave-mode", "full");
 	}
 
 	const env: Record<string, string> = {
-		...process.env as Record<string, string>,
+		...(process.env as Record<string, string>),
 		// Prevent interactive prompts
 		CI: "1",
 	};

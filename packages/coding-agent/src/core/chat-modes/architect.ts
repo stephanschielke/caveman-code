@@ -21,8 +21,8 @@ import {
 	DEFAULT_PROFILE,
 	type ModelRouter,
 	type RouteContext,
-	type RoutingProfile,
 	type RoutingDecision,
+	type RoutingProfile,
 } from "@cave/agent";
 import type { EditFormatName } from "../edit-formats/types.js";
 
@@ -74,10 +74,7 @@ described below. Do not editorialize — execute the plan.`;
 export function buildArchitectProfile(config: ArchitectModeConfig): RoutingProfile {
 	const base = config.baseProfile ?? DEFAULT_PROFILE;
 	const architect = config.architectModel ?? base.roles.plan.model;
-	const editor =
-		config.editorModel ??
-		base.cheapTier?.edit ??
-		base.roles.edit.model;
+	const editor = config.editorModel ?? base.cheapTier?.edit ?? base.roles.edit.model;
 
 	return {
 		name: "architect",
@@ -161,8 +158,6 @@ export function toggleArchitectMode(
 	};
 	return {
 		state: next,
-		message: enable
-			? `architect mode: ON  (editor format = ${next.config.editorFormat})`
-			: "architect mode: OFF",
+		message: enable ? `architect mode: ON  (editor format = ${next.config.editorFormat})` : "architect mode: OFF",
 	};
 }

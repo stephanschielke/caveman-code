@@ -17,8 +17,8 @@
  */
 
 import { readFileSync } from "node:fs";
-import { compressCaveToolOutput, truncateWithToolBudget } from "../../src/core/cave-tool-compression.js";
 import { compressStructuredOutput } from "../../src/core/cave-structured-compression.js";
+import { compressCaveToolOutput, truncateWithToolBudget } from "../../src/core/cave-tool-compression.js";
 import type { ReplayConfigId, ReplayLayer } from "./ablation-matrix.js";
 import { REPLAY_CONFIGS } from "./ablation-matrix.js";
 
@@ -124,7 +124,10 @@ function pipe(result: ReplayToolResult, disables: Set<ReplayLayer>, dedup: Repla
  * Run an arbitrary layer-disable set against a session. Shared implementation
  * for both named replay configs and the synthetic "all-layers-on" baseline.
  */
-function replayWithDisables(sessionPath: string, disables: Set<ReplayLayer>): { tokensOriginal: number; tokensReplay: number } {
+function replayWithDisables(
+	sessionPath: string,
+	disables: Set<ReplayLayer>,
+): { tokensOriginal: number; tokensReplay: number } {
 	const results = extractToolResultsFromJsonl(sessionPath);
 	let tokensOriginal = 0;
 	let tokensReplay = 0;

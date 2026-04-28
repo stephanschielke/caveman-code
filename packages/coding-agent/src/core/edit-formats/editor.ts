@@ -12,8 +12,8 @@
  * Provenance: Aider's `ArchitectCoder`/`EditorEditBlockCoder`. Apache-2.0.
  */
 
-import type { EditFormat } from "./types.js";
 import { diffFormat } from "./diff.js";
+import type { EditFormat } from "./types.js";
 import { wholeFormat } from "./whole.js";
 
 const EDITOR_DIFF_PROMPT = `You are the EDITOR in an architect/editor pair.
