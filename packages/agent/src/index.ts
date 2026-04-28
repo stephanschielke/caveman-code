@@ -10,6 +10,8 @@ export * as mcp from "./mcp/index.js";
 export * as memory from "./memory/index.js";
 // Proxy utilities
 export * from "./proxy.js";
+// Repomap (WS8 — surface to user-facing CLI)
+export * as repomap from "./repomap/index.js";
 // Roles
 export * from "./roles.js";
 // Router

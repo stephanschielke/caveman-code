@@ -25,8 +25,11 @@ describe("languageFor", () => {
 		expect(languageFor("Makefile")).toBe("unknown");
 	});
 
-	it("exposes 8 supported languages", () => {
-		expect(SUPPORTED_LANGUAGES.length).toBe(8);
+	it("exposes 10 supported languages", () => {
+		// WS8 added rb + php on top of the original 8.
+		expect(SUPPORTED_LANGUAGES.length).toBe(10);
+		expect(SUPPORTED_LANGUAGES).toContain("rb");
+		expect(SUPPORTED_LANGUAGES).toContain("php");
 	});
 
 	it("isSupported matches SUPPORTED_LANGUAGES", () => {

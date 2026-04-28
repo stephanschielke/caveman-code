@@ -96,6 +96,8 @@ export const BUILTIN_SLASH_COMMANDS: ReadonlyArray<BuiltinSlashCommand> = [
 		description:
 			"Memory layer (cavemem-backed). Subcommands: search, save, show, forget, export, consolidate, sync, off, on, config.",
 	},
+	{ name: "repomap", description: "Show the Aider-style PageRank repo map (WS8). /repomap help for subcommands." },
+	{ name: "architect", description: "Toggle architect/editor split chat mode (WS8). /architect help for subcommands." },
 	{ name: "quit", description: "Quit pi" },
 ];
 
@@ -482,3 +484,17 @@ export {
 	buildSessionStartPrelude,
 } from "./slash-commands/memory.js";
 export type { MemorySlashContext, MemorySlashResult } from "./slash-commands/memory.js";
+
+// =============================================================================
+// /repomap and /architect (WS8)
+// =============================================================================
+
+export {
+	runRepomapCommand,
+	emptyChatState as emptyRepomapChatState,
+	collectSourceFiles as collectRepomapSourceFiles,
+} from "./slash-commands/repomap.js";
+export type { RepomapChatState, RepomapCommandIO, RepomapCommandResult } from "./slash-commands/repomap.js";
+
+export { runArchitectCommand } from "./slash-commands/architect.js";
+export type { ArchitectCommandIO, ArchitectCommandResult } from "./slash-commands/architect.js";

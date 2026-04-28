@@ -14,6 +14,8 @@ export type RepoLanguage =
 	| "java"
 	| "c"
 	| "cpp"
+	| "rb"
+	| "php"
 	| "unknown";
 
 export interface ParsedSymbol {
@@ -53,6 +55,8 @@ const EXT_MAP: Record<string, RepoLanguage> = {
 	".cxx": "cpp",
 	".hpp": "cpp",
 	".hxx": "cpp",
+	".rb": "rb",
+	".php": "php",
 };
 
 export function languageFor(filename: string): RepoLanguage {
@@ -71,6 +75,8 @@ export const SUPPORTED_LANGUAGES: readonly RepoLanguage[] = [
 	"java",
 	"c",
 	"cpp",
+	"rb",
+	"php",
 ] as const;
 
 export function isSupported(lang: RepoLanguage): boolean {
@@ -103,6 +109,10 @@ const PATTERNS: Partial<Record<RepoLanguage, RegExp>> = {
 	java: /^\s*(?:public|private|protected)?\s*(?:static\s+)?(?:final\s+)?(?:class|interface|enum)\s+(\w+)/gm,
 	c: /^\s*(?:static\s+)?(?:\w+\s+)+(\w+)\s*\([^)]*\)\s*\{/gm,
 	cpp: /^\s*(?:static\s+)?(?:\w+\s+)+(\w+)\s*\([^)]*\)\s*\{/gm,
+	// Ruby: def, class, module
+	rb: /^\s*(def|class|module)\s+(\w+)/gm,
+	// PHP: function, class, interface, trait
+	php: /^\s*(?:public\s+|private\s+|protected\s+|static\s+|final\s+|abstract\s+)*(function|class|interface|trait)\s+(\w+)/gm,
 };
 
 function extractSymbols(file: string, source: string, language: RepoLanguage): ParsedSymbol[] {
@@ -134,6 +144,7 @@ function mapKind(raw: string): ParsedSymbol["kind"] {
 		case "interface":
 		case "enum":
 		case "trait":
+		case "module":
 			return "class";
 		case "type":
 			return "type";

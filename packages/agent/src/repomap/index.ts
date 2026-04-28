@@ -3,3 +3,4 @@ export * from "./symbol-graph.js";
 export * from "./pagerank.js";
 export * from "./render.js";
 export * from "./cache.js";
+export * from "./builder.js";

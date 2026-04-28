@@ -39,6 +39,10 @@ const LANG_WASM_NAME: Partial<Record<RepoLanguage, string>> = {
 	java: "java",
 	c: "c",
 	cpp: "cpp",
+	// WS8: Ruby + PHP wired up but require tree-sitter-ruby/-php WASM grammars
+	// to be present in `_grammarDir`. Until then they fall back to regex.
+	rb: "ruby",
+	php: "php",
 };
 
 /* ------------------------------------------------------------------ */
