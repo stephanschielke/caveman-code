@@ -271,9 +271,9 @@ export function listAvailableRecipes(
 
 	for (const dir of dirs) {
 		if (!existsSync(dir)) continue;
-		let entries: ReturnType<typeof readdirSync>;
+		let entries: string[];
 		try {
-			entries = readdirSync(dir);
+			entries = readdirSync(dir) as string[];
 		} catch {
 			continue;
 		}

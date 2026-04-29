@@ -108,6 +108,12 @@ export interface PromptOptions {
 	summary: string;
 	defaultVerb: PromptVerb;
 	allowAlwaysKey: string;
+	/** Multi-line preview of the command/edit/network call awaiting approval. */
+	commandPreview?: string;
+	/** Optional one-liner from the agent or tool definition explaining why this matters. */
+	reason?: string;
+	/** Render with red error border + "danger" affordance. */
+	danger?: boolean;
 }
 
 export interface PermissionSessionOptions {

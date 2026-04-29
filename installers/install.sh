@@ -195,7 +195,7 @@ log_step "prefix        : ${CAVE_PREFIX}"
 log_step "tarball       : ${URL}"
 log_step "checksum file : ${SUMS_URL}"
 log_step "install dir   : ${VER_DIR}"
-log_step "shim          : ${BIN_DIR}/cave"
+log_step "shim          : ${BIN_DIR}/cave (alias: ${BIN_DIR}/caveman)"
 log_step "modify PATH   : $([ "$NO_MODIFY_PATH" = 1 ] && echo no || echo yes)"
 log_step "checksum tool : ${SHA_TOOL:-(none — verification will be skipped)}"
 
@@ -209,7 +209,7 @@ fi
 # Idempotency: short-circuit if VER_DIR already has the binary
 # ---------------------------------------------------------------------------
 
-if [ -x "${VER_DIR}/cave" ] && [ -L "${BIN_DIR}/cave" ]; then
+if [ -x "${VER_DIR}/cave" ] && [ -L "${BIN_DIR}/cave" ] && [ -L "${BIN_DIR}/caveman" ]; then
     EXISTING="$("${VER_DIR}/cave" --version 2>/dev/null || true)"
     if [ -n "$EXISTING" ]; then
         info "cave ${CAVE_VERSION} already installed at ${VER_DIR}"
@@ -264,6 +264,7 @@ mv "${TMP}/cave" "$VER_DIR"
 chmod +x "${VER_DIR}/cave"
 
 ln -sfn "${VER_DIR}/cave" "${BIN_DIR}/cave"
+ln -sfn "${VER_DIR}/cave" "${BIN_DIR}/caveman"
 
 # Prune older versions, keep most recent KEEP_VERSIONS (the one we just wrote
 # stays via mtime).

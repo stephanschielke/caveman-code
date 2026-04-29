@@ -39,6 +39,10 @@ export interface AppKeybindings {
 	"app.session.rename": true;
 	"app.session.delete": true;
 	"app.session.deleteNoninvasive": true;
+	"app.help": true;
+	"app.subagent.toggle": true;
+	"app.message.editQueue": true;
+	"app.tools.shelfExpand": true;
 }
 
 export type AppKeybinding = keyof AppKeybindings;
@@ -130,6 +134,16 @@ export const KEYBINDINGS = {
 	"app.session.deleteNoninvasive": {
 		defaultKeys: "ctrl+backspace",
 		description: "Delete session when query is empty",
+	},
+	"app.help": { defaultKeys: "f1", description: "Show keyboard help" },
+	"app.subagent.toggle": { defaultKeys: "f2", description: "Toggle subagent overlay" },
+	"app.message.editQueue": {
+		defaultKeys: "ctrl+q",
+		description: "Edit queued messages",
+	},
+	"app.tools.shelfExpand": {
+		defaultKeys: "alt+t",
+		description: "Toggle tool shelf expand",
 	},
 } as const satisfies KeybindingDefinitions;
 

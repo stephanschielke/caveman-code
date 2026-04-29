@@ -36,6 +36,12 @@ export {
 	SIDE_BY_SIDE_MIN_WIDTH,
 } from "./components/DiffView.js";
 export { Editor, type EditorOptions, type EditorTheme } from "./components/editor.js";
+export {
+	type GroupedSelectGroup,
+	type GroupedSelection,
+	GroupedSelectList,
+	type GroupedSelectListOptions,
+} from "./components/grouped-select-list.js";
 export { Image, type ImageOptions, type ImageTheme } from "./components/image.js";
 export { Input } from "./components/input.js";
 export { Loader } from "./components/loader.js";
@@ -74,6 +80,8 @@ export {
 } from "./components/select-list.js";
 export { type SettingItem, SettingsList, type SettingsListTheme } from "./components/settings-list.js";
 export { Spacer } from "./components/spacer.js";
+export { Spinner, type SpinnerOptions } from "./components/spinner.js";
+export { balancePartial, StreamingMarkdown } from "./components/streaming-markdown.js";
 export { Text } from "./components/text.js";
 export { TruncatedText } from "./components/truncated-text.js";
 // Editor component interface (for custom editors)
@@ -110,6 +118,15 @@ export {
 export { encodeOsc52, OSC52_MAX_BYTES, writeOsc52 } from "./osc52.js";
 // Scroll buffer (in-app scrollback)
 export { ScrollBuffer, type ScrollBufferOptions, type ScrollMode } from "./scroll-buffer.js";
+// Spinner frame data
+export {
+	getSpinner,
+	SPINNERS,
+	type SpinnerName,
+	type SpinnerVariant,
+	THINKING_SPINNERS,
+	TOOL_SPINNERS,
+} from "./spinners.js";
 // Input buffering for batch splitting
 export { StdinBuffer, type StdinBufferEventMap, type StdinBufferOptions } from "./stdin-buffer.js";
 // Synchronized output (DEC private mode 2026)

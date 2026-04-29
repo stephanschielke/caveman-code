@@ -3,8 +3,9 @@
 .SYNOPSIS
     Cave installer for Windows.
 .DESCRIPTION
-    Downloads cave-windows-x64.zip, extracts to %LOCALAPPDATA%\cave\<version>\, writes a
-    cave.cmd shim into %LOCALAPPDATA%\cave\bin\, and prepends that to user PATH.
+    Downloads cave-windows-x64.zip, extracts to %LOCALAPPDATA%\cave\<version>\, writes
+    cave.cmd and caveman.cmd shims into %LOCALAPPDATA%\cave\bin\, and prepends that to
+    user PATH.
 
     Env knobs:
       CAVE_VERSION    Tag to install (default: latest)
@@ -71,6 +72,7 @@ $shim = @"
 "%~dp0..\lib\$Version\cave.exe" %*
 "@
 Set-Content -Path (Join-Path $BinDir 'cave.cmd') -Value $shim -Encoding ASCII
+Set-Content -Path (Join-Path $BinDir 'caveman.cmd') -Value $shim -Encoding ASCII
 
 # Prune older versions
 Get-ChildItem -Path $LibDir -Directory |

@@ -491,7 +491,11 @@ export class TUI extends Container {
 			(data) => this.handleInput(data),
 			() => this.requestRender(),
 		);
-		this.terminal.enableMouseTracking();
+		// Mouse tracking is intentionally NOT enabled. Nothing in the app consumes
+		// mouse events yet, and turning tracking on swallows wheel events that the
+		// terminal would otherwise translate to alt-screen scrollback navigation
+		// (and breaks click-drag text selection). Re-enable per-overlay/component
+		// once a consumer is wired up.
 		this.terminal.hideCursor();
 		this.queryCellSize();
 		this.requestRender();

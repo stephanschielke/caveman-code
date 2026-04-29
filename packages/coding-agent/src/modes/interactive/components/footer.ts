@@ -19,6 +19,7 @@ function formatTokens(count: number): string {
  */
 export class FooterComponent implements Component {
 	private autoCompactEnabled = true;
+	private ambiguousModelIds: Set<string> | null = null;
 
 	constructor(
 		private session: AgentSession,
@@ -27,6 +28,7 @@ export class FooterComponent implements Component {
 
 	setSession(session: AgentSession): void {
 		this.session = session;
+		this.ambiguousModelIds = null;
 	}
 
 	setAutoCompactEnabled(enabled: boolean): void {
@@ -34,7 +36,25 @@ export class FooterComponent implements Component {
 	}
 
 	invalidate(): void {
-		// No-op: git branch caching handled by provider
+		// Reset the ambiguous-id cache on invalidate so a registry refresh
+		// (e.g. after editing models.json) is reflected in the footer.
+		this.ambiguousModelIds = null;
+	}
+
+	private getAmbiguousModelIds(): Set<string> {
+		if (this.ambiguousModelIds) return this.ambiguousModelIds;
+		const counts = new Map<string, number>();
+		try {
+			for (const model of this.session.modelRegistry.getAll()) {
+				counts.set(model.id, (counts.get(model.id) ?? 0) + 1);
+			}
+		} catch {
+			// Registry might not be ready; treat as no ambiguity.
+		}
+		const set = new Set<string>();
+		for (const [id, n] of counts) if (n > 1) set.add(id);
+		this.ambiguousModelIds = set;
+		return set;
 	}
 
 	dispose(): void {
@@ -62,76 +82,76 @@ export class FooterComponent implements Component {
 		const contextWindow = contextUsage?.contextWindow ?? state.model?.contextWindow ?? 0;
 		const contextPercentValue = contextUsage?.percent ?? 0;
 		const contextPercent = contextUsage?.percent !== null ? contextPercentValue.toFixed(0) : "?";
+		const contextDisplay = `${contextPercent}%/${formatTokens(contextWindow)}`;
 
-		// Path with ~ substitution
+		// Path with ~ substitution + git branch
 		let pwd = this.session.sessionManager.getCwd();
 		const home = process.env.HOME || process.env.USERPROFILE;
 		if (home && pwd.startsWith(home)) {
 			pwd = `~${pwd.slice(home.length)}`;
 		}
-
-		// Append git branch
 		const branch = this.footerData.getGitBranch();
 		if (branch) {
 			pwd = `${pwd}:${branch}`;
 		}
 
-		// Build left side: path + stats
-		const statsParts = [];
+		// Plain-text left: pwd + stats, then context % at the end (kept separate so
+		// we can apply per-segment styling without nesting ANSI resets).
+		const statsParts: string[] = [];
 		if (totalInput) statsParts.push(`↑${formatTokens(totalInput)}`);
 		if (totalOutput) statsParts.push(`↓${formatTokens(totalOutput)}`);
 		if (totalCost) statsParts.push(`$${totalCost.toFixed(2)}`);
+		const beforeContext = [pwd, ...statsParts].join("  ");
+		const leftPrefixRaw = beforeContext.length > 0 ? `${beforeContext}  ` : "";
+		const leftRaw = leftPrefixRaw + contextDisplay;
 
-		// Context percentage — color-coded
-		let contextPercentStr: string;
-		const contextDisplay = `${contextPercent}%/${formatTokens(contextWindow)}`;
-		if (contextPercentValue > 90) {
-			contextPercentStr = theme.fg("error", contextDisplay);
-		} else if (contextPercentValue > 70) {
-			contextPercentStr = theme.fg("warning", contextDisplay);
+		// Right side: model + thinking. Prefix with provider when the bare model id
+		// is ambiguous across providers (e.g. `gpt-4o` lives on OpenAI, OpenRouter,
+		// and Vercel Gateway), so users can tell at a glance which one is active.
+		let modelName: string;
+		if (state.model) {
+			const ambiguous = this.getAmbiguousModelIds();
+			modelName = ambiguous.has(state.model.id) ? `${state.model.provider}/${state.model.id}` : state.model.id;
 		} else {
-			contextPercentStr = contextDisplay;
+			modelName = "no-model";
 		}
-		statsParts.push(contextPercentStr);
-
-		const leftParts = [pwd, ...statsParts].join("  ");
-
-		// Build right side: model + thinking
-		const modelName = state.model?.id || "no-model";
 		let rightSide = modelName;
 		if (state.model?.reasoning) {
 			const thinkingLevel = state.thinkingLevel || "off";
 			rightSide = thinkingLevel === "off" ? `${modelName} · off` : `${modelName} · ${thinkingLevel}`;
 		}
 
-		// Compose single line
-		const leftWidth = visibleWidth(leftParts);
+		const leftWidth = visibleWidth(leftRaw);
 		const rightWidth = visibleWidth(rightSide);
 		const minPadding = 2;
-		const totalNeeded = leftWidth + minPadding + rightWidth;
 
-		let line: string;
-		if (totalNeeded <= width) {
+		const styleContext = (text: string): string => {
+			if (contextPercentValue > 90) return theme.fg("error", text);
+			if (contextPercentValue > 70) return theme.fg("warning", text);
+			return theme.fg("dim", text);
+		};
+
+		if (leftWidth + minPadding + rightWidth <= width) {
 			const padding = " ".repeat(width - leftWidth - rightWidth);
-			line = leftParts + padding + rightSide;
-		} else {
-			// Truncate right side or drop it
-			const availableForRight = width - leftWidth - minPadding;
-			if (availableForRight > 0) {
-				const truncatedRight = truncateToWidth(rightSide, availableForRight, "");
-				const truncatedRightWidth = visibleWidth(truncatedRight);
-				const padding = " ".repeat(Math.max(0, width - leftWidth - truncatedRightWidth));
-				line = leftParts + padding + truncatedRight;
-			} else {
-				line = truncateToWidth(leftParts, width, "...");
-			}
+			const dimPrefix = leftPrefixRaw.length > 0 ? theme.fg("dim", leftPrefixRaw) : "";
+			const ctxStyled = styleContext(contextDisplay);
+			const tail = theme.fg("dim", padding + rightSide);
+			return [dimPrefix + ctxStyled + tail];
 		}
 
-		// Dim the parts separately to preserve context % coloring
-		const dimLeft = theme.fg("dim", leftParts);
-		const remainder = line.slice(leftParts.length);
-		const dimRemainder = theme.fg("dim", remainder);
+		const availableForRight = width - leftWidth - minPadding;
+		if (availableForRight > 0) {
+			const truncatedRight = truncateToWidth(rightSide, availableForRight, "");
+			const truncatedRightWidth = visibleWidth(truncatedRight);
+			const padding = " ".repeat(Math.max(0, width - leftWidth - truncatedRightWidth));
+			const dimPrefix = leftPrefixRaw.length > 0 ? theme.fg("dim", leftPrefixRaw) : "";
+			const ctxStyled = styleContext(contextDisplay);
+			const tail = theme.fg("dim", padding + truncatedRight);
+			return [dimPrefix + ctxStyled + tail];
+		}
 
-		return [dimLeft + dimRemainder];
+		// Left alone exceeds budget — truncate the raw plain-text and dim it.
+		const truncated = truncateToWidth(leftRaw, width, "...");
+		return [theme.fg("dim", truncated)];
 	}
 }

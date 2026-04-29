@@ -205,6 +205,50 @@ export function subscribeHooksToExtensionEvents(api: ExtensionEventBusLike, mana
 	return manager;
 }
 
+/**
+ * Build a synthetic cave Extension whose handlers fire the configured hooks.
+ *
+ * Drop the returned object into the `extensions` array passed to
+ * `new ExtensionRunner(...)` and the standard `runner.emit({type, ...})`
+ * sites in agent-session will dispatch hook recipes alongside any
+ * user-installed extensions. No event-bus refactor required.
+ */
+/**
+ * Build a synthetic cave Extension whose handlers fire the configured hooks.
+ *
+ * Drop the returned object into the `extensions` array passed to
+ * `new ExtensionRunner(...)` and the standard `runner.emit({type, ...})`
+ * sites in agent-session will dispatch hook recipes alongside any
+ * user-installed extensions. No event-bus refactor required.
+ *
+ * Return type is `unknown`-ish (Map<string, any>) because the cave Extension
+ * shape lives in core/extensions/types.ts and we cannot import it here without
+ * a cycle. The runner only reads `path`, `resolvedPath`, `sourceInfo`, and
+ * `handlers`, so the empty maps below satisfy the structural shape.
+ */
+export function createHooksExtension(manager: HooksManager): unknown {
+	const handlers = new Map<string, ((event: any, ctx: any) => any)[]>();
+	const adapter: ExtensionEventBusLike = {
+		on(event: string, handler: (e: any, ctx: any) => any): void {
+			const list = handlers.get(event) ?? [];
+			list.push(handler);
+			handlers.set(event, list);
+		},
+	};
+	subscribeHooksToExtensionEvents(adapter, manager);
+	return {
+		path: "<builtin:hooks>",
+		resolvedPath: "<builtin:hooks>",
+		sourceInfo: { path: "<builtin:hooks>" },
+		handlers,
+		tools: new Map(),
+		messageRenderers: new Map(),
+		commands: new Map(),
+		flags: new Map(),
+		shortcuts: new Map(),
+	};
+}
+
 function reasonToSource(reason: string): string {
 	switch (reason) {
 		case "startup":

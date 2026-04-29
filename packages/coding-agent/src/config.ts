@@ -51,22 +51,21 @@ export function detectInstallMethod(): InstallMethod {
 	return "unknown";
 }
 
-export function getUpdateInstruction(packageName: string): string {
+/**
+ * Suggest how to update cave. The cave coding agent is distributed as a
+ * compiled binary via the install script and Homebrew formula — it is NOT on
+ * the public npm registry (the `cave` name there is taken by an unrelated CSS
+ * tool). So for every install method the canonical action is `cave self-update`,
+ * with reinstall via the install script as the fallback. The `packageName`
+ * argument is kept for API compatibility but no longer used.
+ */
+// biome-ignore lint/correctness/noUnusedFunctionParameters: kept for API compatibility
+export function getUpdateInstruction(_packageName: string): string {
 	const method = detectInstallMethod();
-	switch (method) {
-		case "bun-binary":
-			return `Download from: https://github.com/JuliusBrussee/caveman-cli/releases/latest`;
-		case "pnpm":
-			return `Run: pnpm install -g ${packageName}`;
-		case "yarn":
-			return `Run: yarn global add ${packageName}`;
-		case "bun":
-			return `Run: bun install -g ${packageName}`;
-		case "npm":
-			return `Run: npm install -g ${packageName}`;
-		default:
-			return `Run: npm install -g ${packageName}`;
+	if (method === "bun-binary") {
+		return "Run: `cave self-update`";
 	}
+	return "Run: `cave self-update` (or reinstall: curl -fsSL https://cave.sh/install | bash)";
 }
 
 // =============================================================================

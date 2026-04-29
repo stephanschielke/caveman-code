@@ -70,6 +70,12 @@ export {
 	readTool,
 	readToolDefinition,
 } from "./read.js";
+export {
+	ClarifySchema,
+	type ClarifyToolDetails,
+	type ClarifyToolInput,
+	clarifyToolDefinition,
+} from "./clarify.js";
 // WS6: Subagents & Plan Mode
 export {
 	createTaskToolDefinition,
@@ -101,6 +107,7 @@ export {
 
 import type { AgentTool } from "@cave/agent";
 import type { ToolDefinition } from "../extensions/types.js";
+import { createAgentToolDefinition } from "./agent.js";
 import {
 	type BashToolOptions,
 	bashTool,
@@ -108,6 +115,7 @@ import {
 	createBashTool,
 	createBashToolDefinition,
 } from "./bash.js";
+import { clarifyToolDefinition } from "./clarify.js";
 import { createEditTool, createEditToolDefinition, editTool, editToolDefinition } from "./edit.js";
 import { createFindTool, createFindToolDefinition, findTool, findToolDefinition } from "./find.js";
 import { createGrepTool, createGrepToolDefinition, grepTool, grepToolDefinition } from "./grep.js";
@@ -119,10 +127,19 @@ import {
 	readTool,
 	readToolDefinition,
 } from "./read.js";
+import { createTaskToolDefinition, type TaskToolOptions } from "./task.js";
+import { wrapToolDefinition } from "./tool-definition-wrapper.js";
 import { createWriteTool, createWriteToolDefinition, writeTool, writeToolDefinition } from "./write.js";
 
 export type Tool = AgentTool<any>;
 export type ToolDef = ToolDefinition<any, any>;
+
+// Module-level Tool wrappers for the WS6 subagent + clarify tools. They share
+// `process.cwd()` because callers that want a custom cwd build via the
+// `createAll*` factories below.
+const taskTool: Tool = wrapToolDefinition(createTaskToolDefinition(process.cwd()));
+const agentTool: Tool = wrapToolDefinition(createAgentToolDefinition(process.cwd()));
+const clarifyTool: Tool = wrapToolDefinition(clarifyToolDefinition);
 
 export const codingTools: Tool[] = [readTool, bashTool, editTool, writeTool];
 export const readOnlyTools: Tool[] = [readTool, grepTool, findTool, lsTool];
@@ -135,6 +152,9 @@ export const allTools = {
 	grep: grepTool,
 	find: findTool,
 	ls: lsTool,
+	clarify: clarifyTool,
+	task: taskTool,
+	agent: agentTool,
 };
 
 export const allToolDefinitions = {
@@ -145,6 +165,9 @@ export const allToolDefinitions = {
 	grep: grepToolDefinition,
 	find: findToolDefinition,
 	ls: lsToolDefinition,
+	clarify: clarifyToolDefinition,
+	task: createTaskToolDefinition(process.cwd()),
+	agent: createAgentToolDefinition(process.cwd()),
 };
 
 export type ToolName = keyof typeof allTools;
@@ -152,6 +175,7 @@ export type ToolName = keyof typeof allTools;
 export interface ToolsOptions {
 	read?: ReadToolOptions;
 	bash?: BashToolOptions;
+	task?: TaskToolOptions;
 }
 
 export function createCodingToolDefinitions(cwd: string, options?: ToolsOptions): ToolDef[] {
@@ -181,6 +205,9 @@ export function createAllToolDefinitions(cwd: string, options?: ToolsOptions): R
 		grep: createGrepToolDefinition(cwd),
 		find: createFindToolDefinition(cwd),
 		ls: createLsToolDefinition(cwd),
+		clarify: clarifyToolDefinition,
+		task: createTaskToolDefinition(cwd, options?.task),
+		agent: createAgentToolDefinition(cwd, options?.task),
 	};
 }
 
@@ -206,5 +233,8 @@ export function createAllTools(cwd: string, options?: ToolsOptions): Record<Tool
 		grep: createGrepTool(cwd),
 		find: createFindTool(cwd),
 		ls: createLsTool(cwd),
+		clarify: wrapToolDefinition(clarifyToolDefinition),
+		task: wrapToolDefinition(createTaskToolDefinition(cwd, options?.task)),
+		agent: wrapToolDefinition(createAgentToolDefinition(cwd, options?.task)),
 	};
 }

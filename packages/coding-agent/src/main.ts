@@ -26,7 +26,7 @@ import { handleRollbackCommand } from "./cli/rollback.js";
 import { handleRunRecipeCommand } from "./cli/run-recipe.js";
 import { handleServeCommand } from "./cli/serve.js";
 import { selectSession } from "./cli/session-picker.js";
-import { maybeNotifyUpdateAvailable, runSelfUpdate } from "./cli/update.js";
+import { runSelfUpdate } from "./cli/update.js";
 import { handleWatchCommand } from "./cli/watch.js";
 import { handleWorkerCommand } from "./cli/worker.js";
 import { getAgentDir, getModelsPath, VERSION } from "./config.js";
@@ -648,14 +648,9 @@ export async function main(args: string[]) {
 		}
 	}
 
-	// WS11: Background once-per-24h update check. Never blocks startup.
-	if (appMode === "interactive" && !offlineMode) {
-		void maybeNotifyUpdateAvailable(startupSettingsManager).then((newer) => {
-			if (newer) {
-				console.error(chalk.dim(`(cave ${newer} is available — run \`cave self-update\` to upgrade)`));
-			}
-		});
-	}
+	// WS11: Update check is handled by interactive-mode (renders a styled
+	// callout via maybeNotifyUpdateAvailable). For non-interactive runs we
+	// skip the notification so it doesn't pollute scripted output.
 
 	// Decide the final runtime cwd before creating cwd-bound runtime services.
 	// --session and --resume may select a session from another project, so project-local

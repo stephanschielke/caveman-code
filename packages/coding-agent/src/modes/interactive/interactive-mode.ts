@@ -32,9 +32,12 @@ import {
 	Loader,
 	Markdown,
 	matchesKey,
+	NULL_SUBAGENT_REGISTRY,
 	ProcessTerminal,
 	renderStatusLineDefault,
+	type SidePanelHandle,
 	Spacer,
+	SubagentOverlay,
 	setKeybindings,
 	Text,
 	TruncatedText,
@@ -42,6 +45,7 @@ import {
 	visibleWidth,
 } from "@cave/tui";
 import { spawn, spawnSync } from "child_process";
+import { maybeNotifyUpdateAvailable } from "../../cli/update.js";
 import {
 	APP_NAME,
 	getAgentDir,
@@ -53,6 +57,7 @@ import {
 } from "../../config.js";
 import { type AgentSession, type AgentSessionEvent, parseSkillBlock } from "../../core/agent-session.js";
 import type { AgentSessionRuntime } from "../../core/agent-session-runtime.js";
+import { type ArchitectModeState, defaultArchitectState } from "../../core/chat-modes/architect.js";
 import { formatInlineCostWithRates, formatSessionEndSummary } from "../../core/cost-formatter.js";
 import { persistSessionCost } from "../../core/cost-persistence.js";
 import type {
@@ -70,7 +75,19 @@ import { DefaultPackageManager } from "../../core/package-manager.js";
 import type { ResourceDiagnostic } from "../../core/resource-loader.js";
 import { formatMissingSessionCwdPrompt, MissingSessionCwdError } from "../../core/session-cwd.js";
 import { type SessionContext, SessionManager } from "../../core/session-manager.js";
-import { BUILTIN_SLASH_COMMANDS, runCostCommand, runTokensCommand } from "../../core/slash-commands.js";
+import { runCheckpointCommand } from "../../core/slash-commands/checkpoint.js";
+import { runMcpSlashCommand } from "../../core/slash-commands/mcp.js";
+import { runRollbackCommand } from "../../core/slash-commands/rollback.js";
+import {
+	BUILTIN_SLASH_COMMANDS,
+	emptyRepomapChatState,
+	type RepomapChatState,
+	runArchitectCommand,
+	runCostCommand,
+	runRecipeSlashCommand,
+	runRepomapCommand,
+	runTokensCommand,
+} from "../../core/slash-commands.js";
 import type { SourceInfo } from "../../core/source-info.js";
 import type { TruncationResult } from "../../core/tools/truncate.js";
 import { getChangelogPath, getNewEntries, parseChangelog } from "../../utils/changelog.js";
@@ -85,6 +102,7 @@ import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
 import { BranchSummaryMessageComponent } from "./components/branch-summary-message.js";
 import { CompactionSummaryMessageComponent } from "./components/compaction-summary-message.js";
+import { ContextMeterComponent } from "./components/context-meter.js";
 import { CustomEditor } from "./components/custom-editor.js";
 import { CustomMessageComponent } from "./components/custom-message.js";
 import { DaxnutsComponent } from "./components/daxnuts.js";
@@ -93,16 +111,26 @@ import { ExtensionEditorComponent } from "./components/extension-editor.js";
 import { ExtensionInputComponent } from "./components/extension-input.js";
 import { ExtensionSelectorComponent } from "./components/extension-selector.js";
 import { FooterComponent } from "./components/footer.js";
+import { showHelpOverlay } from "./components/help-overlay.js";
 import { keyText } from "./components/keybinding-hints.js";
 import { LoginDialogComponent } from "./components/login-dialog.js";
 import { ModelSelectorComponent } from "./components/model-selector.js";
 import { OAuthSelectorComponent } from "./components/oauth-selector.js";
+import { type QueuedItem, showQueuedMessages } from "./components/queued-messages.js";
 import { ScopedModelsSelectorComponent } from "./components/scoped-models-selector.js";
 import { SessionSelectorComponent } from "./components/session-selector.js";
 import { SettingsSelectorComponent } from "./components/settings-selector.js";
 import { SkillInvocationMessageComponent } from "./components/skill-invocation-message.js";
+import {
+	type SkillAction,
+	type SkillCategory,
+	type SkillEntry,
+	type SkillSourceTag,
+	SkillsHubComponent,
+} from "./components/skills-hub.js";
 import { StartupHeaderComponent } from "./components/startup-header.js";
 import { ToolExecutionComponent } from "./components/tool-execution.js";
+import { ToolGroupShellComponent } from "./components/tool-shelf.js";
 import { TreeSelectorComponent } from "./components/tree-selector.js";
 import { UserMessageComponent } from "./components/user-message.js";
 import { UserMessageSelectorComponent } from "./components/user-message-selector.js";
@@ -130,6 +158,12 @@ interface Expandable {
 
 function isExpandable(obj: unknown): obj is Expandable {
 	return typeof obj === "object" && obj !== null && "setExpanded" in obj && typeof obj.setExpanded === "function";
+}
+
+function mapSkillScope(scope: string): SkillSourceTag {
+	if (scope === "user") return "user";
+	if (scope === "project") return "project";
+	return "bundled";
 }
 
 type CompactionQueuedMessage = {
@@ -167,6 +201,7 @@ export class InteractiveMode {
 	private fdPath: string | undefined;
 	private editorContainer: Container;
 	private footer: FooterComponent;
+	private contextMeter: ContextMeterComponent;
 	private actionBar: ActionBarComponent;
 	private footerDataProvider: FooterDataProvider;
 	// Stored so the same manager can be injected into custom editors, selectors, and extension UI.
@@ -201,6 +236,9 @@ export class InteractiveMode {
 	// Tool execution tracking: toolCallId -> component
 	private pendingTools = new Map<string, ToolExecutionComponent>();
 
+	// Active tool group for the current assistant turn (≥ 2 tools collapse to a shelf).
+	private currentToolGroup: ToolGroupShellComponent | undefined = undefined;
+
 	// Tool output expansion state
 	private toolOutputExpanded = false;
 
@@ -213,6 +251,13 @@ export class InteractiveMode {
 	// Agent subscription unsubscribe function
 	private unsubscribe?: () => void;
 
+	// F2 subagent overlay (no-op shell until WS6 lands the real registry).
+	private subagentOverlay: SubagentOverlay | undefined = undefined;
+	private subagentPanel: SidePanelHandle | null = null;
+
+	// F1 help overlay handle (null when not visible).
+	private helpOverlay: OverlayHandle | null = null;
+
 	// Track if editor is in bash mode (text starts with !)
 	private isBashMode = false;
 
@@ -221,6 +266,11 @@ export class InteractiveMode {
 
 	// Track pending bash components (shown in pending area, moved to chat on submit)
 	private pendingBashComponents: BashExecutionComponent[] = [];
+
+	// /repomap and /architect ephemeral state (persists across slash invocations
+	// within a session — not the same as the agent's persistent state).
+	private repomapChatState: RepomapChatState = emptyRepomapChatState();
+	private architectState: ArchitectModeState = defaultArchitectState();
 
 	// Auto-compaction state
 	private autoCompactionLoader: Loader | undefined = undefined;
@@ -301,6 +351,8 @@ export class InteractiveMode {
 		this.version = VERSION;
 		this.ui = new TUI(new ProcessTerminal(), this.settingsManager.getShowHardwareCursor());
 		this.ui.setClearOnShrink(this.settingsManager.getClearOnShrink());
+		this.subagentOverlay = new SubagentOverlay({ registry: NULL_SUBAGENT_REGISTRY });
+		this.subagentOverlay.bindRedraw(() => this.ui.requestRender());
 		this.headerContainer = new Container();
 		this.chatContainer = new Container();
 		this.pendingMessagesContainer = new Container();
@@ -321,6 +373,7 @@ export class InteractiveMode {
 		this.footerDataProvider = new FooterDataProvider(this.sessionManager.getCwd());
 		this.footer = new FooterComponent(this.session, this.footerDataProvider);
 		this.footer.setAutoCompactEnabled(this.session.autoCompactionEnabled);
+		this.contextMeter = new ContextMeterComponent(this.session);
 		this.actionBar = new ActionBarComponent(() => this.getActionBarState());
 
 		// Load hide thinking block setting
@@ -521,10 +574,20 @@ export class InteractiveMode {
 		// Add header with keybindings from config (unless silenced)
 		if (this.options.verbose || !this.settingsManager.getQuietStartup()) {
 			const caveModeState = this.session.getCaveModeSessionState();
+			const ctxWindow = this.session.state.model?.contextWindow;
+			const ctxWindowLabel = ctxWindow
+				? ctxWindow >= 1_000_000
+					? `${Math.round(ctxWindow / 100_000) / 10}M context`
+					: `${Math.round(ctxWindow / 1000)}k context`
+				: undefined;
 			this.builtInHeader = new StartupHeaderComponent({
 				version: this.version,
 				caveModeEnabled: caveModeState.enabled,
 				caveModeIntensity: caveModeState.intensity,
+				model: this.session.state.model?.id,
+				contextWindow: ctxWindowLabel,
+				effort: this.session.state.thinkingLevel,
+				cwd: this.sessionManager.getCwd(),
 			});
 
 			// Setup UI layout
@@ -544,9 +607,10 @@ export class InteractiveMode {
 		this.ui.addChild(this.widgetContainerAbove);
 		this.ui.addChild(this.editorContainer);
 		this.ui.addChild(this.widgetContainerBelow);
+		this.ui.addChild(this.contextMeter);
 		this.ui.addChild(this.actionBar);
 		this.ui.addChild(this.footer);
-		this.ui.setBottomPinnedChildren(2); // actionBar + footer pinned to bottom
+		this.ui.setBottomPinnedChildren(3); // contextMeter + actionBar + footer pinned to bottom
 		this.ui.setFocus(this.editor);
 
 		this.setupKeyHandlers();
@@ -676,25 +740,17 @@ export class InteractiveMode {
 	}
 
 	/**
-	 * Check npm registry for a newer version.
+	 * Check the cave GitHub releases for a newer version. Throttled to once per
+	 * 24h via SettingsManager and deduped per-version so we don't nag.
+	 *
+	 * Note: do NOT query the public npm registry here — `cave` on npmjs.org is
+	 * an unrelated CSS package by another author. The GH releases API is the
+	 * canonical source of truth for the cave coding agent.
 	 */
 	private async checkForNewVersion(): Promise<string | undefined> {
 		if (process.env.PI_SKIP_VERSION_CHECK || process.env.PI_OFFLINE) return undefined;
-
 		try {
-			const response = await fetch("https://registry.npmjs.org/cave/latest", {
-				signal: AbortSignal.timeout(10000),
-			});
-			if (!response.ok) return undefined;
-
-			const data = (await response.json()) as { version?: string };
-			const latestVersion = data.version;
-
-			if (latestVersion && latestVersion !== this.version) {
-				return latestVersion;
-			}
-
-			return undefined;
+			return await maybeNotifyUpdateAvailable(this.settingsManager);
 		} catch {
 			return undefined;
 		}
@@ -1292,6 +1348,7 @@ export class InteractiveMode {
 	private applyRuntimeSettings(): void {
 		this.footer.setSession(this.session);
 		this.footer.setAutoCompactEnabled(this.session.autoCompactionEnabled);
+		this.contextMeter.setSession(this.session);
 		this.footerDataProvider.setCwd(this.sessionManager.getCwd());
 		this.hideThinkingBlock = this.settingsManager.getHideThinkingBlock();
 		this.ui.setShowHardwareCursor(this.settingsManager.getShowHardwareCursor());
@@ -1333,6 +1390,7 @@ export class InteractiveMode {
 		this.streamingComponent = undefined;
 		this.streamingMessage = undefined;
 		this.pendingTools.clear();
+		this.currentToolGroup = undefined;
 		this.renderInitialMessages();
 	}
 
@@ -2097,6 +2155,10 @@ export class InteractiveMode {
 		this.defaultEditor.onAction("app.session.tree", () => this.showTreeSelector());
 		this.defaultEditor.onAction("app.session.fork", () => this.showUserMessageSelector());
 		this.defaultEditor.onAction("app.session.resume", () => this.showSessionSelector());
+		this.defaultEditor.onAction("app.help", () => this.toggleHelpOverlay());
+		this.defaultEditor.onAction("app.subagent.toggle", () => this.toggleSubagentOverlay());
+		this.defaultEditor.onAction("app.message.editQueue", () => this.openQueuedMessagesEditor());
+		this.defaultEditor.onAction("app.tools.shelfExpand", () => this.toggleLastToolShelf());
 
 		this.defaultEditor.onChange = (text: string) => {
 			const wasBashMode = this.isBashMode;
@@ -2196,6 +2258,11 @@ export class InteractiveMode {
 				this.editor.setText("");
 				return;
 			}
+			if (text === "/skills" || text === "/plugins") {
+				this.editor.setText("");
+				this.handleSkillsCommand(text === "/plugins" ? "marketplace" : undefined);
+				return;
+			}
 			if (text === "/fork") {
 				this.showUserMessageSelector();
 				this.editor.setText("");
@@ -2282,6 +2349,60 @@ export class InteractiveMode {
 			if (text === "/quit") {
 				this.editor.setText("");
 				await this.shutdown();
+				return;
+			}
+			if (text === "/mcp" || text.startsWith("/mcp ")) {
+				this.editor.setText("");
+				await this.handleMcpSlashCommand(text);
+				return;
+			}
+			if (text === "/sandbox" || text.startsWith("/sandbox ")) {
+				this.editor.setText("");
+				this.handleSandboxSlashCommand(text);
+				return;
+			}
+			if (text === "/memory" || text.startsWith("/memory ")) {
+				this.editor.setText("");
+				await this.handleMemorySlashCommand(text);
+				return;
+			}
+			if (text === "/repomap" || text.startsWith("/repomap ")) {
+				const args = text.startsWith("/repomap ") ? text.slice(9) : "";
+				this.editor.setText("");
+				await this.handleRepomapSlashCommand(args);
+				return;
+			}
+			if (text === "/architect" || text.startsWith("/architect ")) {
+				const args = text.startsWith("/architect ") ? text.slice(11) : "";
+				this.editor.setText("");
+				await this.handleArchitectSlashCommand(args);
+				return;
+			}
+			if (text === "/recipe" || text.startsWith("/recipe ")) {
+				this.editor.setText("");
+				await this.handleRecipeSlashCommand(text);
+				return;
+			}
+			if (text === "/checkpoint" || text.startsWith("/checkpoint ")) {
+				const args = text.startsWith("/checkpoint ") ? text.slice(12) : "";
+				this.editor.setText("");
+				await this.handleCheckpointSlashCommand(args);
+				return;
+			}
+			if (text === "/rollback" || text.startsWith("/rollback ")) {
+				const args = text.startsWith("/rollback ") ? text.slice(10) : "";
+				this.editor.setText("");
+				await this.handleRollbackSlashCommand(args);
+				return;
+			}
+
+			// Unknown built-in slash → show error rather than leaking to chat.
+			// Markdown commands, prompt templates, and extension commands are
+			// resolved later inside session.prompt(), so let those through.
+			if (text.startsWith("/") && this.isUnwiredBuiltinSlash(text)) {
+				this.showError(
+					`/${text.slice(1).split(/\s+/, 1)[0]} is registered but not wired in this build. Try /hotkeys.`,
+				);
 				return;
 			}
 
@@ -2430,7 +2551,11 @@ export class InteractiveMode {
 									this.sessionManager.getCwd(),
 								);
 								component.setExpanded(this.toolOutputExpanded);
-								this.chatContainer.addChild(component);
+								if (!this.currentToolGroup) {
+									this.currentToolGroup = new ToolGroupShellComponent();
+									this.chatContainer.addChild(this.currentToolGroup);
+								}
+								this.currentToolGroup.addTool(content.name, component);
 								this.pendingTools.set(content.id, component);
 							} else {
 								const component = this.pendingTools.get(content.id);
@@ -2475,6 +2600,10 @@ export class InteractiveMode {
 						for (const [, component] of this.pendingTools.entries()) {
 							component.setArgsComplete();
 						}
+					}
+					if (this.currentToolGroup) {
+						this.currentToolGroup.finalize();
+						this.currentToolGroup = undefined;
 					}
 					this.streamingComponent = undefined;
 					// WS19: render inline cost after each successful assistant message
@@ -3021,6 +3150,69 @@ export class InteractiveMode {
 		} else {
 			this.showStatus(`Restored ${restored} queued message${restored > 1 ? "s" : ""} to editor`);
 		}
+	}
+
+	private toggleSubagentOverlay(): void {
+		if (!this.subagentOverlay) return;
+		if (this.subagentPanel) {
+			this.subagentPanel.hide();
+			this.subagentPanel = null;
+			return;
+		}
+		this.subagentPanel = this.ui.showSidePanel(this.subagentOverlay, { side: "right" });
+	}
+
+	private toggleHelpOverlay(): void {
+		if (this.helpOverlay) {
+			this.helpOverlay.hide();
+			this.helpOverlay = null;
+			return;
+		}
+		this.helpOverlay = showHelpOverlay(this.ui, () => {
+			this.helpOverlay = null;
+		});
+	}
+
+	private async openQueuedMessagesEditor(): Promise<void> {
+		const steering = [...this.session.getSteeringMessages()];
+		const followUp = [...this.session.getFollowUpMessages()];
+		const items: QueuedItem[] = [
+			...steering.map<QueuedItem>((text) => ({ mode: "steer", text })),
+			...followUp.map<QueuedItem>((text) => ({ mode: "followUp", text })),
+		];
+		if (items.length === 0) {
+			this.showStatus("No queued messages to edit");
+			return;
+		}
+		const result = await showQueuedMessages(this.ui, { items });
+		if (!result) return;
+
+		let kept = result.kept;
+		let pendingEdit: QueuedItem | undefined;
+		if (result.editIndex !== undefined && result.editIndex >= 0 && result.editIndex < kept.length) {
+			pendingEdit = kept[result.editIndex];
+			kept = kept.filter((_, i) => i !== result.editIndex);
+		}
+
+		const nextSteering = kept.filter((i) => i.mode === "steer").map((i) => i.text);
+		const nextFollowUp = kept.filter((i) => i.mode === "followUp").map((i) => i.text);
+		await this.session.replaceQueues(nextSteering, nextFollowUp);
+
+		if (pendingEdit) {
+			this.editor.setText(pendingEdit.text);
+		}
+	}
+
+	private toggleLastToolShelf(): void {
+		const children = this.chatContainer.children;
+		for (let i = children.length - 1; i >= 0; i--) {
+			const child = children[i];
+			if (child instanceof ToolGroupShellComponent && child.toggleExpanded()) {
+				this.ui.requestRender();
+				return;
+			}
+		}
+		this.showStatus("No tool shelf to toggle");
 	}
 
 	private getActionBarState() {
@@ -4133,6 +4325,104 @@ export class InteractiveMode {
 		this.ui.requestRender();
 	}
 
+	// =========================================================================
+	// Slash command runners (WS-era commands not yet covered above)
+	// =========================================================================
+
+	private appendSlashOutput(text: string, isError: boolean): void {
+		const display = isError ? theme.fg("warning", text) : text;
+		this.chatContainer.addChild(new Spacer(1));
+		this.chatContainer.addChild(new Text(display, 1, 0));
+		this.ui.requestRender();
+	}
+
+	private async handleMcpSlashCommand(text: string): Promise<void> {
+		const result = await runMcpSlashCommand(text, { cwd: this.sessionManager.getCwd() });
+		this.appendSlashOutput(result.lines.join("\n"), result.errors > 0);
+	}
+
+	private handleSandboxSlashCommand(text: string): void {
+		// /sandbox in interactive mode shows the active policy hint and points
+		// users at the CLI form (`cave sandbox -- <cmd>`) for execution. The
+		// CLI handler shells out, which would corrupt the TUI here.
+		const argv = text.replace(/^\/sandbox\s*/, "").trim();
+		const lines = [
+			"Sandbox policy is configured per session via permission mode (Shift+Tab to cycle).",
+			"For sandbox-as-utility execution use the CLI: cave sandbox -- <cmd>",
+		];
+		if (argv) {
+			lines.unshift(`Args ignored in interactive mode: ${argv}`);
+		}
+		this.appendSlashOutput(lines.join("\n"), false);
+	}
+
+	private async handleMemorySlashCommand(text: string): Promise<void> {
+		const { memory: memoryNs } = await import("@cave/agent");
+		const { runMemorySlashCommand } = await import("../../core/slash-commands.js");
+		try {
+			const provider = new memoryNs.CavememProvider();
+			const result = await runMemorySlashCommand(text, {
+				cwd: this.sessionManager.getCwd(),
+				provider,
+				enabled: true,
+			});
+			this.appendSlashOutput(result.lines.join("\n"), result.errors > 0);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			this.appendSlashOutput(
+				`Memory unavailable: ${message}\nInstall cavemem or run \`cave memory help\` for setup.`,
+				true,
+			);
+		}
+	}
+
+	private async handleRepomapSlashCommand(args: string): Promise<void> {
+		const result = await runRepomapCommand(args, {
+			cwd: this.sessionManager.getCwd(),
+			chatState: this.repomapChatState,
+		});
+		this.appendSlashOutput(result.output, result.exitCode !== 0);
+	}
+
+	private async handleArchitectSlashCommand(args: string): Promise<void> {
+		const result = await runArchitectCommand(args, { state: this.architectState });
+		this.architectState = result.state;
+		this.appendSlashOutput(result.output, result.exitCode !== 0);
+	}
+
+	private async handleRecipeSlashCommand(text: string): Promise<void> {
+		const args = text.replace(/^\/recipe\s*/, "");
+		const result = await runRecipeSlashCommand(args, {
+			cwd: this.sessionManager.getCwd(),
+		});
+		this.appendSlashOutput(result.output, result.exitCode !== 0);
+		// If the recipe yielded a goal, inject it as the next user prompt.
+		if (result.goal && result.exitCode === 0) {
+			await this.session.prompt(result.goal);
+		}
+	}
+
+	private async handleCheckpointSlashCommand(args: string): Promise<void> {
+		const result = await runCheckpointCommand(args, {
+			projectRoot: this.sessionManager.getCwd(),
+			sessionId: this.session.sessionId ?? "interactive",
+		});
+		this.appendSlashOutput(result.output, result.exitCode !== 0);
+	}
+
+	private async handleRollbackSlashCommand(args: string): Promise<void> {
+		const result = await runRollbackCommand(args, {
+			projectRoot: this.sessionManager.getCwd(),
+		});
+		this.appendSlashOutput(result.output, result.exitCode !== 0);
+	}
+
+	private isUnwiredBuiltinSlash(text: string): boolean {
+		const head = text.slice(1).split(/\s+/, 1)[0];
+		if (!head) return false;
+		return BUILTIN_SLASH_COMMANDS.some((c) => c.name === head);
+	}
+
 	private async handleReloadCommand(): Promise<void> {
 		if (this.session.isStreaming) {
 			this.showWarning("Wait for the current response to finish before reloading.");
@@ -4607,6 +4897,72 @@ export class InteractiveMode {
 		this.chatContainer.addChild(new Markdown(hotkeys.trim(), 1, 1, this.getMarkdownThemeWithSettings()));
 		this.chatContainer.addChild(new DynamicBorder());
 		this.ui.requestRender();
+	}
+
+	private handleSkillsCommand(initialFilter?: SkillSourceTag): void {
+		const categories = this.buildSkillCategories();
+		this.showSelector((done) => {
+			const component = new SkillsHubComponent({
+				categories,
+				onAction: (action: SkillAction) => {
+					done();
+					this.handleSkillAction(action);
+				},
+				onClose: () => done(),
+			});
+			void initialFilter;
+			return { component, focus: component };
+		});
+	}
+
+	private buildSkillCategories(): SkillCategory[] {
+		const skills = this.session.resourceLoader.getSkills().skills;
+		const buckets: Record<SkillSourceTag, SkillEntry[]> = {
+			bundled: [],
+			user: [],
+			project: [],
+			marketplace: [],
+		};
+		for (const skill of skills) {
+			const tag = mapSkillScope(skill.sourceInfo.scope);
+			buckets[tag].push({
+				name: skill.name,
+				description: skill.description,
+				source: tag,
+				location: skill.filePath,
+			});
+		}
+		return [
+			{ id: "bundled", label: "Bundled", skills: buckets.bundled },
+			{ id: "user", label: "User", skills: buckets.user },
+			{ id: "project", label: "Project", skills: buckets.project },
+			{ id: "marketplace", label: "Marketplace", skills: buckets.marketplace },
+		];
+	}
+
+	private handleSkillAction(action: SkillAction): void {
+		if (action.type === "inspect") {
+			const skill = action.skill;
+			const lines = [
+				`### ${skill.name}`,
+				"",
+				skill.description ? `**Description:** ${skill.description}` : "",
+				`**Source:** ${skill.source}`,
+				skill.location ? `**Path:** \`${skill.location}\`` : "",
+			]
+				.filter(Boolean)
+				.join("\n");
+			this.chatContainer.addChild(new Spacer(1));
+			this.chatContainer.addChild(new Markdown(lines, 1, 0, this.getMarkdownThemeWithSettings()));
+			this.ui.requestRender();
+			return;
+		}
+		// install — placeholder until a marketplace registry exists.
+		if (action.skill.source === "marketplace") {
+			this.showStatus(`Marketplace install not implemented yet for ${action.skill.name}`);
+			return;
+		}
+		this.showStatus(`${action.skill.name} is already a ${action.skill.source} skill (no install needed)`);
 	}
 
 	private async handleClearCommand(): Promise<void> {

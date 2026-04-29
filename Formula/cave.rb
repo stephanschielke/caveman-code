@@ -31,6 +31,7 @@ class Cave < Formula
     # dirname(process.execPath), so the binary and companions must live together.
     libexec.install Dir["*"]
     bin.write_exec_script libexec/"cave"
+    bin.install_symlink bin/"cave" => "caveman"
   end
 
   test do

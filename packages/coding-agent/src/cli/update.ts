@@ -244,12 +244,14 @@ export async function runSelfUpdate(args: string[]): Promise<number> {
 	}
 
 	if (method !== "bun-binary") {
-		// Don't fight the package manager — print the right command.
+		// cave isn't on npm (the `cave` name there is an unrelated package),
+		// so we cannot drive a package-manager update. Tell the user to
+		// reinstall via the canonical install script.
 		const instr = getUpdateInstruction(PACKAGE_NAME);
 		emit(
 			{
 				ok: true,
-				msg: `cave was installed via ${method}; please run: ${instr}`,
+				msg: `cave was installed via ${method}; reinstall to upgrade — ${instr}`,
 				current: VERSION,
 				latest: release.tag,
 				channel,

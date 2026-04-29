@@ -67,6 +67,9 @@ import {
 	type TurnStartEvent,
 	wrapRegisteredTools,
 } from "./extensions/index.js";
+import { buildDefaultCavememHooks } from "./hooks/cavemem-hooks.js";
+import type { HooksConfig } from "./hooks/events.js";
+import { createHooksExtension, HooksManager } from "./hooks/index.js";
 import type { BashExecutionMessage, CustomMessage } from "./messages.js";
 import type { ModelRegistry } from "./model-registry.js";
 import { expandPromptTemplate, type PromptTemplate } from "./prompt-templates.js";
@@ -271,6 +274,8 @@ export class AgentSession {
 	private _extensionRunner: ExtensionRunner | undefined = undefined;
 	private _turnIndex = 0;
 	private _llmlingua: LLMLinguaMiddleware | null = null;
+	// Hooks subsystem (WS4). Rebuilt in `_buildRuntime` from current settings.
+	private _hooksManager: HooksManager | undefined;
 
 	private _resourceLoader: ResourceLoader;
 	private _customTools: ToolDefinition[];
@@ -1455,6 +1460,25 @@ export class AgentSession {
 		return this._followUpMessages;
 	}
 
+	/**
+	 * Replace both queues with new text contents. Drops any image attachments
+	 * or original timestamps because the editor UI works in plain text only;
+	 * callers that need richer payloads should keep using `steer()` /
+	 * `followUp()` directly.
+	 */
+	async replaceQueues(steering: string[], followUp: string[]): Promise<void> {
+		this._steeringMessages = [];
+		this._followUpMessages = [];
+		this.agent.clearAllQueues();
+		for (const text of steering) {
+			await this._queueSteer(text);
+		}
+		for (const text of followUp) {
+			await this._queueFollowUp(text);
+		}
+		this._emitQueueUpdate();
+	}
+
 	get resourceLoader(): ResourceLoader {
 		return this._resourceLoader;
 	}
@@ -2408,6 +2432,39 @@ export class AgentSession {
 		this.setActiveToolsByName([...new Set(nextActiveToolNames)]);
 	}
 
+	/**
+	 * Build a HooksManager from current settings + cavemem default recipe.
+	 * Intentionally permissive: missing settings yield an empty manager (no-op).
+	 */
+	private _buildHooksManager(): HooksManager {
+		const sm = this.settingsManager;
+		const manager = new HooksManager({
+			cwd: () => this._cwd,
+			projectDir: () => this._cwd,
+			sessionId: () => this.sessionId,
+			registry: { disableAllHooks: sm.getDisableAllHooks?.() ?? false },
+		});
+		const global = sm.getGlobalHooks?.() as HooksConfig | undefined;
+		const project = sm.getProjectHooks?.() as HooksConfig | undefined;
+		if (global) manager.registry.setLayer("global", global);
+		if (project) manager.registry.setLayer("project", project);
+		// Auto-record cavemem hooks when CAVE_MEMORY_AUTO_RECORD=1 (opt-in, no
+		// settings-manager dependency yet). When set, merge cavemem hook
+		// recipes on top of the global layer.
+		if (process.env.CAVE_MEMORY_AUTO_RECORD === "1") {
+			manager.registry.setLayer("global", {
+				...((global ?? {}) as HooksConfig),
+				...buildDefaultCavememHooks(),
+			} as HooksConfig);
+		}
+		return manager;
+	}
+
+	/** Hooks manager bound to this session (lifecycle events). */
+	get hooksManager(): HooksManager | undefined {
+		return this._hooksManager;
+	}
+
 	private async _buildRuntime(options: {
 		activeToolNames?: string[];
 		flagValues?: Map<string, boolean | string>;
@@ -2446,12 +2503,20 @@ export class AgentSession {
 			}
 		}
 
-		const hasExtensions = extensionsResult.extensions.length > 0;
+		// Build a HooksManager from settings (Claude Code-compatible) and merge in
+		// the cavemem auto-record recipe when memory is enabled. The synthetic
+		// "hooks" extension below is appended to extensionsResult.extensions so
+		// the runner dispatches lifecycle hooks alongside any user extensions.
+		const hooksManager = this._buildHooksManager();
+		this._hooksManager = hooksManager;
+		const allExtensions = [...extensionsResult.extensions, createHooksExtension(hooksManager) as any];
+
+		const hasExtensions = allExtensions.length > 0;
 		const hasCustomTools = this._customTools.length > 0;
 		this._extensionRunner =
 			hasExtensions || hasCustomTools
 				? new ExtensionRunner(
-						extensionsResult.extensions,
+						allExtensions,
 						extensionsResult.runtime,
 						this._cwd,
 						this.sessionManager,

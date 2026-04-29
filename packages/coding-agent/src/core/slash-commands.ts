@@ -108,6 +108,8 @@ export const BUILTIN_SLASH_COMMANDS: ReadonlyArray<BuiltinSlashCommand> = [
 	{ name: "cost", description: "Show session cost + today + this-week totals (WS19)." },
 	{ name: "checkpoint", description: "Create a labeled shadow-git snapshot (WS17). /checkpoint <name>" },
 	{ name: "rollback", description: "Restore from a shadow-git snapshot (WS17). /rollback [N] [--file <path>] | list" },
+	{ name: "skills", description: "Open the skills hub overlay (browse user/project/bundled skills)." },
+	{ name: "plugins", description: "Open the plugins surface (alias for /skills marketplace stage; placeholder for now)." },
 	{ name: "quit", description: "Quit pi" },
 ];
 

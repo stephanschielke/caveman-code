@@ -173,6 +173,27 @@ export interface Settings {
 	 * `parseStatusLineSettings` in `@cave/tui` for the validated shape.
 	 */
 	statusLine?: StatusLineSettings;
+	/** Pinned models surfaced at the top of the model picker. */
+	favoriteModels?: ModelRef[];
+	/** Most-recently selected models, capped to a small N (LRU). */
+	recentModels?: ModelRef[];
+}
+
+export interface ModelRef {
+	provider: string;
+	id: string;
+}
+
+function dedupeModelRefs(refs: ModelRef[]): ModelRef[] {
+	const seen = new Set<string>();
+	const out: ModelRef[] = [];
+	for (const ref of refs) {
+		const key = `${ref.provider}/${ref.id}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push({ provider: ref.provider, id: ref.id });
+	}
+	return out;
 }
 
 /** Deep merge settings: project/overrides take precedence, nested objects merge recursively */
@@ -639,6 +660,43 @@ export class SettingsManager {
 		this.globalSettings.defaultModel = modelId;
 		this.markModified("defaultProvider");
 		this.markModified("defaultModel");
+		this.save();
+	}
+
+	getFavoriteModels(): ModelRef[] {
+		return [...(this.settings.favoriteModels ?? [])];
+	}
+
+	setFavoriteModels(refs: ModelRef[]): void {
+		this.globalSettings.favoriteModels = dedupeModelRefs(refs);
+		this.markModified("favoriteModels");
+		this.save();
+	}
+
+	toggleFavoriteModel(provider: string, modelId: string): boolean {
+		const current = this.getFavoriteModels();
+		const index = current.findIndex((r) => r.provider === provider && r.id === modelId);
+		if (index >= 0) {
+			current.splice(index, 1);
+			this.setFavoriteModels(current);
+			return false;
+		}
+		current.push({ provider, id: modelId });
+		this.setFavoriteModels(current);
+		return true;
+	}
+
+	getRecentModels(): ModelRef[] {
+		return [...(this.settings.recentModels ?? [])];
+	}
+
+	pushRecentModel(provider: string, modelId: string, cap: number = 5): void {
+		const previous = this.getRecentModels();
+		const filtered = previous.filter((r) => !(r.provider === provider && r.id === modelId));
+		filtered.unshift({ provider, id: modelId });
+		const capped = filtered.slice(0, Math.max(1, cap));
+		this.globalSettings.recentModels = capped;
+		this.markModified("recentModels");
 		this.save();
 	}
 

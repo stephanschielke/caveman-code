@@ -89,6 +89,33 @@ describe("FooterComponent width handling", () => {
 		}
 	});
 
+	it("truncates the left side when its plain width alone exceeds the terminal", () => {
+		// Reproduces the crash where leftParts (path + stats + ctx %) was wider
+		// than the terminal but the dim wrap re-applied the untruncated string.
+		const width = 59;
+		const session = createSession({
+			sessionName: "long-session",
+			modelId: "GPT-5.4",
+			reasoning: true,
+			thinkingLevel: "minimal",
+			usage: {
+				input: 70_000,
+				output: 4_000,
+				cacheRead: 0,
+				cacheWrite: 0,
+				cost: { total: 0.29 },
+			},
+		});
+		(session.sessionManager as unknown as { getCwd(): string }).getCwd =
+			() => "/Users/julb/Desktop/GitHub/caveman-cli";
+		const footer = new FooterComponent(session, createFooterData(1));
+
+		const lines = footer.render(width);
+		for (const line of lines) {
+			expect(visibleWidth(line)).toBeLessThanOrEqual(width);
+		}
+	});
+
 	it("keeps stats line within width for wide model and provider names", () => {
 		const width = 60;
 		const session = createSession({
