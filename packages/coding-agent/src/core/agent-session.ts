@@ -16,15 +16,13 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import type { Agent, AgentEvent, AgentMessage, AgentState, AgentTool, ThinkingLevel } from "@cave/agent";
-import { LLMLinguaMiddleware, PLAN_MODE_TOOLS } from "@cave/agent";
+import { checkpoints, LLMLinguaMiddleware } from "@cave/agent";
+
+const { CheckpointManager } = checkpoints;
+type CheckpointManagerInstance = InstanceType<typeof CheckpointManager>;
+
 import type { AssistantMessage, ImageContent, Message, Model, TextContent } from "@cave/ai";
-import {
-	ENV_VAR_BY_PROVIDER,
-	isContextOverflow,
-	modelsAreEqual,
-	resetApiProviders,
-	supportsXhigh,
-} from "@cave/ai";
+import { ENV_VAR_BY_PROVIDER, isContextOverflow, modelsAreEqual, resetApiProviders, supportsXhigh } from "@cave/ai";
 import { getDocsPath } from "../config.js";
 import { theme } from "../modes/interactive/theme/theme.js";
 import { stripFrontmatter } from "../utils/frontmatter.js";
@@ -36,6 +34,7 @@ import {
 	compressCaveToolContentBlocks,
 	ReadDeduplicationCache,
 } from "./cave-tool-compression.js";
+import { type ChatMode, filterToolsForPlanMode, planSystemPrompt } from "./chat-modes/plan.js";
 import {
 	type CompactionResult,
 	calculateContextTokens,
@@ -77,7 +76,6 @@ import { buildDefaultCavememHooks } from "./hooks/cavemem-hooks.js";
 import type { HooksConfig } from "./hooks/events.js";
 import { createHooksExtension, HooksManager } from "./hooks/index.js";
 import type { BashExecutionMessage, CustomMessage } from "./messages.js";
-import { PermissionSession, type PromptUI } from "./permission-prompt.js";
 import type { ModelRegistry } from "./model-registry.js";
 import { expandPromptTemplate, type PromptTemplate } from "./prompt-templates.js";
 import type { ResourceExtensionPaths, ResourceLoader } from "./resource-loader.js";
@@ -172,18 +170,6 @@ export interface AgentSessionConfig {
 	extensionRunnerRef?: { current?: ExtensionRunner };
 	/** Session start event metadata emitted when extensions bind to this runtime. */
 	sessionStartEvent?: SessionStartEvent;
-	/**
-	 * WS3 permission UI. When set, tools that opt into the SandboxPolicy
-	 * reducer can call `agentSession.permissionSession?.decide(action)` and
-	 * surface the 4-verb overlay. In headless mode, supply a HeadlessPromptUI
-	 * so non-interactive runs do not block.
-	 */
-	permissionUI?: PromptUI;
-	/**
-	 * Initial permission mode. Drives the SandboxPolicy reducer and the
-	 * subagent runner's plan-mode tool gating. Defaults to "default".
-	 */
-	permissionMode?: import("@cave/agent").PermissionMode;
 }
 
 export interface ExtensionBindings {
@@ -295,11 +281,6 @@ export class AgentSession {
 	private _llmlingua: LLMLinguaMiddleware | null = null;
 	// Hooks subsystem (WS4). Rebuilt in `_buildRuntime` from current settings.
 	private _hooksManager: HooksManager | undefined;
-	// WS3 permission UI + lazy session. UI is injected by the host (interactive
-	// or headless). The session is rebuilt when permission mode changes.
-	private _permissionUI: PromptUI | undefined;
-	private _permissionSession: PermissionSession | undefined;
-	private _permissionMode: import("@cave/agent").PermissionMode = "default";
 
 	private _resourceLoader: ResourceLoader;
 	private _customTools: ToolDefinition[];
@@ -334,6 +315,31 @@ export class AgentSession {
 	// Read deduplication cache (Cave Painting Diff)
 	private _readDeduplicationCache = new ReadDeduplicationCache();
 
+	// Gap 4: shadow-git checkpoint manager. Lazy-instantiated against _cwd.
+	private _checkpointMgr: CheckpointManagerInstance | undefined;
+	private _checkpointAutoSnapshotEnabled = true;
+
+	// Gap 1: repomap auto-injection state.
+	private _repomapEnabled = true;
+	private _repomapAddedFiles = new Set<string>();
+	private _repomapMentionedFiles = new Set<string>();
+	private _repomapCache: { hash: string; rendered: string } | undefined;
+	private _repomapBuildPromise: Promise<void> | undefined;
+
+	// Gap 2: chat mode for plan ↔ edit gating. "auto" = no gating (default).
+	// Honor `CAVE_CHAT_MODE` env (set by parent task tool's per-call mode override).
+	private _chatMode: ChatMode =
+		process.env.CAVE_CHAT_MODE === "plan" ? "plan" : process.env.CAVE_CHAT_MODE === "edit" ? "edit" : "auto";
+
+	// Gap 7: soft compaction state. Threshold = fraction of context window above
+	// which we proactively LLMLingua-compress oldest tool-result blocks. Hard
+	// compaction (whole-history summary) still runs as a safety net.
+	private _softCompressionThreshold = 0.7;
+	private _softCompressedTimestamps = new Set<number>();
+	// Don't compress messages from the last N turns — recency matters for
+	// continuity and for the assistant to reference its own recent work.
+	private _softCompressionRecencyWindow = 5;
+
 	constructor(config: AgentSessionConfig) {
 		this.agent = config.agent;
 		this.sessionManager = config.sessionManager;
@@ -347,10 +353,6 @@ export class AgentSession {
 		this._initialActiveToolNames = config.initialActiveToolNames;
 		this._baseToolsOverride = config.baseToolsOverride;
 		this._sessionStartEvent = config.sessionStartEvent ?? { type: "session_start", reason: "startup" };
-		this._permissionUI = config.permissionUI;
-		if (config.permissionMode) {
-			this._permissionMode = config.permissionMode;
-		}
 
 		// Always subscribe to agent events for internal handling
 		// (session persistence, extensions, auto-compaction, retry logic)
@@ -404,6 +406,10 @@ export class AgentSession {
 	 */
 	private _installAgentToolHooks(): void {
 		this.agent.beforeToolCall = async ({ toolCall, args }) => {
+			// Gap 4: take a shadow-git snapshot before mutating tools so the user
+			// can /rollback. preToolSnapshot is a no-op for non-mutating tools.
+			await this._maybeAutoSnapshot(toolCall.name);
+
 			const runner = this._extensionRunner;
 			if (!runner?.hasHandlers("tool_call")) {
 				return undefined;
@@ -427,6 +433,11 @@ export class AgentSession {
 		};
 
 		this.agent.afterToolCall = async ({ toolCall, args, result, isError }) => {
+			// Gap 1: track file-touching tool calls for repomap personalization.
+			if (!isError) {
+				this._updateRepomapStateFromTool(toolCall.name, args);
+			}
+
 			const caveEnabled =
 				this.settingsManager.getCaveModeToolCompression() && this.settingsManager.getCaveModeEnabled();
 
@@ -545,6 +556,286 @@ export class AgentSession {
 				details: hookResult.details,
 			};
 		};
+
+		// Gap 1 + Gap 7: chain repomap injection with soft compression.
+		this.agent.transformContext = async (messages) => {
+			const afterRepomap = await this._buildRepomapTransform(messages);
+			return this._softCompactTransform(afterRepomap);
+		};
+
+		// Gap 2 + Gap 8: chat-mode tool gating + plan-mode system-prompt banner.
+		this.agent.toolFilter = (tools) => {
+			if (this._chatMode === "plan") return filterToolsForPlanMode(tools);
+			return tools;
+		};
+		this.agent.getSystemPrompt = (ctx) => {
+			if (this._chatMode === "plan") return planSystemPrompt(ctx.systemPrompt);
+			return ctx.systemPrompt;
+		};
+	}
+
+	// =========================================================================
+	// Checkpoints (Gap 4)
+	// =========================================================================
+
+	/** Lazy-instantiated shadow-git checkpoint manager bound to this session's cwd. */
+	get checkpointManager(): CheckpointManagerInstance {
+		if (!this._checkpointMgr) {
+			this._checkpointMgr = new CheckpointManager(this._cwd);
+		}
+		return this._checkpointMgr;
+	}
+
+	/** Toggle automatic pre-tool snapshots (manual snapshots always allowed). */
+	setAutoSnapshotEnabled(enabled: boolean): void {
+		this._checkpointAutoSnapshotEnabled = enabled;
+	}
+
+	private async _maybeAutoSnapshot(toolName: string): Promise<void> {
+		if (!this._checkpointAutoSnapshotEnabled) return;
+		try {
+			const result = await this.checkpointManager.preToolSnapshot(toolName, this.sessionId);
+			if (result) {
+				this._emit({
+					type: "checkpoint_taken",
+					checkpointId: result.commit,
+					toolName,
+					sessionId: this.sessionId,
+					fileCount: result.files.length,
+					timestamp: Date.now(),
+				});
+			}
+		} catch (err) {
+			// Snapshots are advisory — never block tool execution.
+			const message = err instanceof Error ? err.message : String(err);
+			console.warn(`[cave/checkpoints] auto-snapshot failed for ${toolName}: ${message}`);
+		}
+	}
+
+	// =========================================================================
+	// Repomap auto-injection (Gap 1)
+	// =========================================================================
+
+	setRepomapEnabled(enabled: boolean): void {
+		this._repomapEnabled = enabled;
+		if (!enabled) this._repomapCache = undefined;
+	}
+
+	/** Mark a file as added to chat-state (PageRank weight 10×). */
+	repomapAdd(absPath: string): void {
+		this._repomapMentionedFiles.delete(absPath);
+		this._repomapAddedFiles.add(absPath);
+		this._repomapCache = undefined;
+	}
+
+	/** Mark a file as mentioned (PageRank weight 0.5×). */
+	repomapMention(absPath: string): void {
+		if (this._repomapAddedFiles.has(absPath)) return;
+		this._repomapMentionedFiles.add(absPath);
+		this._repomapCache = undefined;
+	}
+
+	private _updateRepomapStateFromTool(toolName: string, args: unknown): void {
+		if (!this._repomapEnabled) return;
+		const path = (args as { path?: string } | undefined)?.path;
+		if (!path) return;
+		const abs = resolve(this._cwd, path);
+		if (toolName === "edit" || toolName === "write") {
+			this.repomapAdd(abs);
+		} else if (toolName === "read") {
+			this.repomapMention(abs);
+		}
+	}
+
+	private _scanUserMessageForFiles(text: string): void {
+		// Conservative regex: relative paths with at least one slash and a known
+		// source-file extension. Avoids matching arbitrary words.
+		const re =
+			/(?<![\w/])((?:[\w.-]+\/)+[\w.-]+\.(?:ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|c|h|cc|cpp|rb|php))(?![\w])/g;
+		for (const match of text.matchAll(re)) {
+			const abs = resolve(this._cwd, match[1]);
+			this.repomapMention(abs);
+		}
+	}
+
+	private _repomapHash(): string {
+		const added = [...this._repomapAddedFiles].sort().join("|");
+		const mentioned = [...this._repomapMentionedFiles].sort().join("|");
+		return `${added}::${mentioned}`;
+	}
+
+	private async _getOrBuildRepomap(): Promise<string | undefined> {
+		const hash = this._repomapHash();
+		if (this._repomapCache?.hash === hash) return this._repomapCache.rendered;
+
+		// Single-flight: if a build is already in progress, wait for it.
+		if (this._repomapBuildPromise) {
+			await this._repomapBuildPromise;
+			if (this._repomapCache?.hash === hash) return this._repomapCache.rendered;
+		}
+
+		const buildPromise = this._buildRepomap(hash);
+		this._repomapBuildPromise = buildPromise.then(
+			() => undefined,
+			() => undefined,
+		);
+		try {
+			return await buildPromise;
+		} finally {
+			this._repomapBuildPromise = undefined;
+		}
+	}
+
+	private async _buildRepomap(hash: string): Promise<string | undefined> {
+		try {
+			const { collectSourceFiles } = await import("./slash-commands/repomap.js");
+			const { repomap: repomapNs } = await import("@cave/agent");
+			const { buildRepomap, dynamicMapTokens } = repomapNs;
+
+			const files = collectSourceFiles(this._cwd);
+			if (files.length === 0) {
+				this._repomapCache = { hash, rendered: "" };
+				return "";
+			}
+			const tokenBudget = dynamicMapTokens({ hasFilesInChat: this._repomapAddedFiles.size > 0 });
+			const result = await buildRepomap({
+				files,
+				tokenBudget,
+				workdir: this._cwd,
+				chatState: {
+					addedFiles: [...this._repomapAddedFiles],
+					mentionedFiles: [...this._repomapMentionedFiles],
+				},
+			});
+			this._repomapCache = { hash, rendered: result.rendered };
+			return result.rendered;
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			console.warn(`[cave/repomap] build failed: ${message}`);
+			return undefined;
+		}
+	}
+
+	private async _buildRepomapTransform(messages: AgentMessage[]): Promise<AgentMessage[]> {
+		if (!this._repomapEnabled) return messages;
+
+		// Mine the most recent user message for file path mentions.
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const m = messages[i];
+			if (m.role === "user") {
+				const text = Array.isArray(m.content)
+					? m.content
+							.filter((c): c is { type: "text"; text: string } => c.type === "text")
+							.map((c) => c.text)
+							.join("\n")
+					: typeof m.content === "string"
+						? m.content
+						: "";
+				if (text) this._scanUserMessageForFiles(text);
+				break;
+			}
+		}
+
+		const rendered = await this._getOrBuildRepomap();
+		if (!rendered) return messages;
+
+		const repomapMessage: AgentMessage = {
+			role: "custom",
+			customType: "repomap",
+			content: `<repomap>\nThe following is a PageRank-ranked map of repository symbols, refreshed each turn. Use it to discover relevant files before you read them.\n\n${rendered}\n</repomap>`,
+			display: false,
+			timestamp: Date.now(),
+		};
+
+		// Inject just before the latest user message so the model reads the map
+		// as antecedent context, not a follow-up reply.
+		for (let i = messages.length - 1; i >= 0; i--) {
+			if (messages[i].role === "user") {
+				return [...messages.slice(0, i), repomapMessage, ...messages.slice(i)];
+			}
+		}
+		return [...messages, repomapMessage];
+	}
+
+	// =========================================================================
+	// Chat mode (Gap 2)
+	// =========================================================================
+
+	get chatMode(): ChatMode {
+		return this._chatMode;
+	}
+
+	setChatMode(mode: ChatMode): void {
+		this._chatMode = mode;
+	}
+
+	// =========================================================================
+	// Soft long-context compaction (Gap 7)
+	// =========================================================================
+
+	/**
+	 * Proactive LLMLingua compression of OLDEST tool-result blocks once context
+	 * usage crosses `_softCompressionThreshold`. Runs INSIDE transformContext
+	 * so the LLM sees a smaller payload but the session keeps the original
+	 * messages on disk. Hard compaction (`_runAutoCompaction`) still triggers
+	 * if growth continues — this is a soft, reversible pass.
+	 */
+	private async _softCompactTransform(messages: AgentMessage[]): Promise<AgentMessage[]> {
+		// Same toggle as the existing in-line tool-result compression. If the
+		// user has cave-mode ML compression off, leave the messages alone.
+		if (!this.settingsManager.getCaveModeEnabled()) return messages;
+		if (!this.settingsManager.getCaveModeMLCompression()) return messages;
+
+		const contextWindow = this.model?.contextWindow ?? 0;
+		if (contextWindow <= 0) return messages;
+		const estimate = estimateContextTokens(messages);
+		if (estimate.tokens / contextWindow < this._softCompressionThreshold) return messages;
+
+		// Identify protected suffix: messages within the last N turns. A "turn"
+		// here = one assistant message + its tool results. We protect by counting
+		// from the end and stopping after we've seen N assistant messages.
+		let assistantSeen = 0;
+		let firstProtectedIndex = messages.length;
+		for (let i = messages.length - 1; i >= 0; i--) {
+			if (messages[i].role === "assistant") {
+				assistantSeen += 1;
+				if (assistantSeen >= this._softCompressionRecencyWindow) {
+					firstProtectedIndex = i;
+					break;
+				}
+			}
+		}
+
+		if (!this._llmlingua) {
+			this._llmlingua = new LLMLinguaMiddleware(true);
+		}
+
+		const transformed = await Promise.all(
+			messages.map(async (m, idx) => {
+				if (idx >= firstProtectedIndex) return m;
+				if (m.role !== "toolResult") return m;
+				if (this._softCompressedTimestamps.has(m.timestamp)) return m;
+
+				try {
+					const compressedContent = await Promise.all(
+						(m.content as Array<{ type: string; text?: string; [key: string]: unknown }>).map(async (block) => {
+							if (block.type !== "text" || typeof block.text !== "string") return block;
+							const r = await this._llmlingua!.compressAsync(block.text, {
+								targetRatio: 0.5,
+								activationThreshold: 4000,
+							});
+							return r.compressed ? { ...block, text: r.bytes } : block;
+						}),
+					);
+					this._softCompressedTimestamps.add(m.timestamp);
+					return { ...m, content: compressedContent } as AgentMessage;
+				} catch {
+					// Compression is advisory; skip on error.
+					return m;
+				}
+			}),
+		);
+		return transformed;
 	}
 
 	// =========================================================================
@@ -670,6 +961,19 @@ export class AgentSession {
 			// Track assistant message for auto-compaction (checked on agent_end)
 			if (event.message.role === "assistant") {
 				this._lastAssistantMessage = event.message;
+
+				// Plan persistence: when in plan mode, persist the assistant's
+				// plan to disk so /act can re-inject it after a fork/resume.
+				if (this._chatMode === "plan") {
+					const planText = (event.message.content ?? [])
+						.filter((c) => c.type === "text")
+						.map((c) => (c as { type: "text"; text: string }).text)
+						.join("\n")
+						.trim();
+					if (planText) {
+						void this._persistPlan(planText);
+					}
+				}
 
 				const assistantMsg = event.message as AssistantMessage;
 				if (assistantMsg.stopReason !== "error") {
@@ -1019,6 +1323,15 @@ export class AgentSession {
 	// but their snippets and guidelines are suppressed from the system prompt.
 	private static readonly ALWAYS_ON_TOOLS = new Set(["bash", "read", "edit", "write"]);
 
+	private async _persistPlan(text: string): Promise<void> {
+		try {
+			const { writePlan, extractPlanFromMessage } = await import("./plans.js");
+			writePlan(this.sessionId, extractPlanFromMessage(text));
+		} catch {
+			/* best-effort persistence */
+		}
+	}
+
 	private _rebuildSystemPrompt(toolNames: string[]): string {
 		const validToolNames = toolNames.filter((name) => this._toolRegistry.has(name));
 		const toolSnippets: Record<string, string> = {};
@@ -1049,6 +1362,7 @@ export class AgentSession {
 		const loadedContextFiles = this._resourceLoader.getAgentsFiles().agentsFiles;
 
 		const caveModeSettings = this.settingsManager.getCaveModeSettings();
+		const activeModel = this.agent.state.model;
 		return buildSystemPrompt({
 			cwd: this._cwd,
 			skills: loadedSkills,
@@ -1058,6 +1372,7 @@ export class AgentSession {
 			selectedTools: validToolNames,
 			toolSnippets,
 			promptGuidelines,
+			modelId: activeModel?.id,
 			caveMode: {
 				enabled: caveModeEnabled,
 				intensity: this._sessionCaveModeIntensity ?? caveModeSettings.intensity,
@@ -2493,84 +2808,6 @@ export class AgentSession {
 		return this._hooksManager;
 	}
 
-	/**
-	 * WS3 PromptUI bound to this session. Tools that opt into sandbox policy
-	 * enforcement can pull this and call `chooseVerb()` directly, or use the
-	 * `permissionSession` getter below for the full reducer flow.
-	 */
-	get permissionUI(): PromptUI | undefined {
-		return this._permissionUI;
-	}
-
-	/**
-	 * Late-bind the PromptUI after session construction. Used by interactive
-	 * mode, which only has the TUI handle once the runtime has booted, but
-	 * needs to feed an `ApprovalPromptUI(this.ui)` to the agent so subsequent
-	 * tool calls can prompt.
-	 */
-	setPermissionUI(ui: PromptUI | undefined): void {
-		this._permissionUI = ui;
-		// Invalidate any cached PermissionSession so the next access rebuilds
-		// against the new UI.
-		this._permissionSession = undefined;
-	}
-
-	/**
-	 * Lazy `PermissionSession` for tools that want full reducer + persistence.
-	 * Built on first access; rebuilt by `setPermissionMode()` when the mode
-	 * changes. Returns undefined if no `permissionUI` was supplied to config.
-	 */
-	get permissionSession(): PermissionSession | undefined {
-		if (!this._permissionUI) return undefined;
-		if (!this._permissionSession) {
-			// Lazy import to keep module load time clean for headless runs that
-			// never touch the policy primitives.
-			const { defaultPolicyForMode } = require("@cave/agent");
-			this._permissionSession = new PermissionSession({
-				cwd: this._cwd,
-				policy: defaultPolicyForMode(this._permissionMode, this._cwd),
-				mode: this._permissionMode,
-				ui: this._permissionUI,
-			});
-		}
-		return this._permissionSession;
-	}
-
-	/** Current permission mode for this session. */
-	get permissionMode(): import("@cave/agent").PermissionMode {
-		return this._permissionMode;
-	}
-
-	/** Rebuild the PermissionSession with a new permission mode. */
-	setPermissionMode(mode: import("@cave/agent").PermissionMode): void {
-		const previous = this._permissionMode;
-		this._permissionMode = mode;
-		if (this._permissionUI) {
-			const { defaultPolicyForMode } = require("@cave/agent");
-			this._permissionSession = new PermissionSession({
-				cwd: this._cwd,
-				policy: defaultPolicyForMode(mode, this._cwd),
-				mode,
-				ui: this._permissionUI,
-			});
-		} else {
-			// No UI yet — the next permissionSession access will build with the new mode.
-			this._permissionSession = undefined;
-		}
-		// Re-filter the active tool list when entering or leaving plan mode so
-		// mutating tools (edit/write/bash) actually disappear during plan.
-		// When LEAVING plan mode we pass `undefined` so `_buildRuntime` restores
-		// the full default set rather than re-filtering the already-narrowed
-		// list.
-		if (previous !== mode && (previous === "plan" || mode === "plan")) {
-			const activeToolNames = mode === "plan" ? this.getActiveToolNames() : undefined;
-			void this._buildRuntime({
-				activeToolNames,
-				includeAllExtensionTools: true,
-			});
-		}
-	}
-
 	private async _buildRuntime(options: {
 		activeToolNames?: string[];
 		flagValues?: Map<string, boolean | string>;
@@ -2631,6 +2868,18 @@ export class AgentSession {
 							}
 							return overrides;
 						})(),
+						// Gap 3: forward subagent JSON-stream events to TUI as
+						// `subagent_progress` AgentSessionEvents.
+						onProgress: (event) => {
+							this._emit({
+								type: "subagent_progress",
+								subagentId: event.subagentId,
+								subagentName: event.subagentName,
+								phase: event.phase,
+								detail: event.detail,
+								timestamp: Date.now(),
+							});
+						},
 					},
 				});
 
@@ -2677,14 +2926,8 @@ export class AgentSession {
 			? Object.keys(this._baseToolsOverride)
 			: ["read", "bash", "edit", "write", "task", "agent"];
 		const requestedActive = options.activeToolNames ?? defaultActiveToolNames;
-		// In plan mode, hard-restrict the active set to read-only tools so the
-		// model can never reach `edit`/`write`/`bash` (mutating). Bash itself
-		// is allowed but separately gated by `isPlanModeBashCommand` at exec
-		// time.
-		const baseActiveToolNames =
-			this._permissionMode === "plan" ? requestedActive.filter((t) => PLAN_MODE_TOOLS.has(t)) : requestedActive;
 		this._refreshToolRegistry({
-			activeToolNames: baseActiveToolNames,
+			activeToolNames: requestedActive,
 			includeAllExtensionTools: options.includeAllExtensionTools,
 		});
 	}
