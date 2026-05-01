@@ -76,6 +76,11 @@ function loadContextFileFromDir(dir: string): { path: string; content: string } 
 function loadProjectContextFiles(
 	options: { cwd?: string; agentDir?: string } = {},
 ): Array<{ path: string; content: string }> {
+	// `CAVE_OMIT_CLAUDE_MD=1` (set by parent task tool when subagent.omitClaudeMd=true)
+	// short-circuits the entire AGENTS.md / CLAUDE.md hierarchy walk. Used for
+	// read-only specialists (explore/critic/reviewer) where project context is
+	// noise. Mirrors claude-code loadAgentsDir.ts:128-131.
+	if (process.env.CAVE_OMIT_CLAUDE_MD === "1") return [];
 	const resolvedCwd = options.cwd ?? process.cwd();
 	const resolvedAgentDir = options.agentDir ?? getAgentDir();
 

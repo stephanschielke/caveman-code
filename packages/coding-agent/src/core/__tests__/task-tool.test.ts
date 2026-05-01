@@ -32,7 +32,6 @@ const stubLoaded: LoadAgentDefsResult = {
 				prompt: "You are a tester.",
 				tools: ["read"],
 				model: undefined,
-				permissionMode: "default",
 				isolation: "none",
 				source: "user",
 				filePath: "<test:tester>",

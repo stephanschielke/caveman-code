@@ -33,6 +33,7 @@ import {
 	Markdown,
 	matchesKey,
 	NULL_SUBAGENT_REGISTRY,
+	notify,
 	ProcessTerminal,
 	renderStatusLineDefault,
 	type SidePanelHandle,
@@ -75,8 +76,10 @@ import { DefaultPackageManager } from "../../core/package-manager.js";
 import type { ResourceDiagnostic } from "../../core/resource-loader.js";
 import { formatMissingSessionCwdPrompt, MissingSessionCwdError } from "../../core/session-cwd.js";
 import { type SessionContext, SessionManager } from "../../core/session-manager.js";
+import { runActCommand } from "../../core/slash-commands/act.js";
 import { runCheckpointCommand } from "../../core/slash-commands/checkpoint.js";
 import { runMcpSlashCommand } from "../../core/slash-commands/mcp.js";
+import { runPlanCommand } from "../../core/slash-commands/plan.js";
 import { runRollbackCommand } from "../../core/slash-commands/rollback.js";
 import {
 	BUILTIN_SLASH_COMMANDS,
@@ -89,6 +92,7 @@ import {
 	runTokensCommand,
 } from "../../core/slash-commands.js";
 import type { SourceInfo } from "../../core/source-info.js";
+import { InMemorySubagentRegistry } from "../../core/subagents-registry.js";
 import type { TruncationResult } from "../../core/tools/truncate.js";
 import { getChangelogPath, getNewEntries, parseChangelog } from "../../utils/changelog.js";
 import { copyToClipboard } from "../../utils/clipboard.js";
@@ -96,15 +100,13 @@ import { extensionForImageMimeType, readClipboardImage } from "../../utils/clipb
 import { parseGitUrl } from "../../utils/git.js";
 import { ensureTool } from "../../utils/tools-manager.js";
 import { ActionBarComponent } from "./components/action-bar.js";
-import { ApprovalPromptUI } from "./components/approval-prompt.js";
-import { showConfirmPrompt } from "./components/confirm-prompt.js";
-import { InMemorySubagentRegistry } from "../../core/subagents-registry.js";
 import { ArminComponent } from "./components/armin.js";
 import { AssistantMessageComponent } from "./components/assistant-message.js";
 import { BashExecutionComponent } from "./components/bash-execution.js";
 import { BorderedLoader } from "./components/bordered-loader.js";
 import { BranchSummaryMessageComponent } from "./components/branch-summary-message.js";
 import { CompactionSummaryMessageComponent } from "./components/compaction-summary-message.js";
+import { showConfirmPrompt } from "./components/confirm-prompt.js";
 import { ContextMeterComponent } from "./components/context-meter.js";
 import { CustomEditor } from "./components/custom-editor.js";
 import { CustomMessageComponent } from "./components/custom-message.js";
@@ -359,10 +361,6 @@ export class InteractiveMode {
 		this.version = VERSION;
 		this.ui = new TUI(new ProcessTerminal(), this.settingsManager.getShowHardwareCursor());
 		this.ui.setClearOnShrink(this.settingsManager.getClearOnShrink());
-		// WS3: feed the 4-verb approval overlay to the agent so any sandbox-
-		// policy-aware tool can call session.permissionUI.chooseVerb(...) and
-		// surface the prompt.
-		this.session.setPermissionUI(new ApprovalPromptUI(this.ui));
 		this.subagentOverlay = new SubagentOverlay({ registry: this.subagentRegistry });
 		this.subagentOverlay.bindRedraw(() => this.ui.requestRender());
 		this.headerContainer = new Container();
@@ -2368,11 +2366,6 @@ export class InteractiveMode {
 				await this.handleMcpSlashCommand(text);
 				return;
 			}
-			if (text === "/sandbox" || text.startsWith("/sandbox ")) {
-				this.editor.setText("");
-				this.handleSandboxSlashCommand(text);
-				return;
-			}
 			if (text === "/memory" || text.startsWith("/memory ")) {
 				this.editor.setText("");
 				await this.handleMemorySlashCommand(text);
@@ -2405,6 +2398,18 @@ export class InteractiveMode {
 				const args = text.startsWith("/rollback ") ? text.slice(10) : "";
 				this.editor.setText("");
 				await this.handleRollbackSlashCommand(args);
+				return;
+			}
+			if (text === "/plan" || text.startsWith("/plan ")) {
+				const args = text.startsWith("/plan ") ? text.slice(6) : "";
+				this.editor.setText("");
+				this.handlePlanSlashCommand(args);
+				return;
+			}
+			if (text === "/act" || text.startsWith("/act ")) {
+				const args = text.startsWith("/act ") ? text.slice(5) : "";
+				this.editor.setText("");
+				this.handleActSlashCommand(args);
 				return;
 			}
 
@@ -2810,6 +2815,40 @@ export class InteractiveMode {
 					this.showError(`Retry failed after ${event.attempt} attempts: ${event.finalError || "Unknown error"}`);
 				}
 				this.ui.requestRender();
+				break;
+			}
+
+			case "checkpoint_taken": {
+				// Gap 6: surface auto-checkpoint boundaries as a dim transcript line
+				// so the user can see where they can `cave rollback` to.
+				this.showStatus(
+					`▽ checkpoint @ ${event.toolName} · ${event.fileCount} file${event.fileCount === 1 ? "" : "s"} · #${event.checkpointId.slice(0, 8)}`,
+				);
+				break;
+			}
+
+			case "subagent_progress": {
+				// Gap 6: live subagent activity from spawned cave children.
+				// Render only "started" / "tool" / "completed" / "failed" — the
+				// "message" phase is too chatty for the inline transcript.
+				if (event.phase === "tool") {
+					this.showStatus(`◇ ${event.subagentName}: tool ${event.detail ?? ""}`);
+				} else if (event.phase === "started") {
+					this.showStatus(`◇ ${event.subagentName}: ${event.detail ?? "starting"}`);
+				} else if (event.phase === "completed") {
+					this.showStatus(`✓ ${event.subagentName}: done`);
+					try {
+						notify({ title: "cave subagent", body: `${event.subagentName} done` });
+					} catch {}
+				} else if (event.phase === "failed") {
+					this.showStatus(`✗ ${event.subagentName}: ${event.detail ?? "failed"}`);
+					try {
+						notify({
+							title: "cave subagent",
+							body: `${event.subagentName} failed: ${event.detail ?? ""}`,
+						});
+					} catch {}
+				}
 				break;
 			}
 		}
@@ -4378,21 +4417,6 @@ export class InteractiveMode {
 		this.appendSlashOutput(result.lines.join("\n"), result.errors > 0);
 	}
 
-	private handleSandboxSlashCommand(text: string): void {
-		// /sandbox in interactive mode shows the active policy hint and points
-		// users at the CLI form (`cave sandbox -- <cmd>`) for execution. The
-		// CLI handler shells out, which would corrupt the TUI here.
-		const argv = text.replace(/^\/sandbox\s*/, "").trim();
-		const lines = [
-			"Sandbox policy is configured per session via permission mode (Shift+Tab to cycle).",
-			"For sandbox-as-utility execution use the CLI: cave sandbox -- <cmd>",
-		];
-		if (argv) {
-			lines.unshift(`Args ignored in interactive mode: ${argv}`);
-		}
-		this.appendSlashOutput(lines.join("\n"), false);
-	}
-
 	private async handleMemorySlashCommand(text: string): Promise<void> {
 		const { memory: memoryNs } = await import("@cave/agent");
 		const { runMemorySlashCommand } = await import("../../core/slash-commands.js");
@@ -4452,6 +4476,39 @@ export class InteractiveMode {
 			projectRoot: this.sessionManager.getCwd(),
 		});
 		this.appendSlashOutput(result.output, result.exitCode !== 0);
+	}
+
+	private handlePlanSlashCommand(args: string): void {
+		const result = runPlanCommand(args, {
+			getChatMode: () => this.session.chatMode,
+			setChatMode: (mode) => this.session.setChatMode(mode),
+			sessionId: this.session.sessionId,
+		});
+		this.appendSlashOutput(result.output, result.exitCode !== 0);
+		this._refreshChatModeFooter();
+	}
+
+	private handleActSlashCommand(args: string): void {
+		const result = runActCommand(args, {
+			setChatMode: (mode) => this.session.setChatMode(mode),
+			sessionId: this.session.sessionId,
+			enqueueFollowUp: (text) => {
+				void this.session.prompt(text, { streamingBehavior: "followUp" });
+			},
+		});
+		this.appendSlashOutput(result.output, result.exitCode !== 0);
+		this._refreshChatModeFooter();
+	}
+
+	/** Gap 6: surface the active chat mode as a footer extension status. */
+	private _refreshChatModeFooter(): void {
+		const mode = this.session.chatMode;
+		this.footerDataProvider.setExtensionStatus(
+			"chat-mode",
+			mode === "plan" ? theme.fg("warning", "⏸ plan") : undefined,
+		);
+		this.footer.invalidate();
+		this.ui.requestRender();
 	}
 
 	private isUnwiredBuiltinSlash(text: string): boolean {

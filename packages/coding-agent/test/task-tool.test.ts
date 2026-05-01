@@ -95,7 +95,6 @@ beforeEach(() => {
 			"name: explore",
 			"description: scout",
 			"tools: read, grep",
-			"permissionMode: plan",
 			"---",
 			"",
 			"You are explore.",

@@ -51,12 +51,10 @@ import {
 } from "./core/session-cwd.js";
 import { SessionManager } from "./core/session-manager.js";
 import { SettingsManager } from "./core/settings-manager.js";
-import { handleSandboxCommand } from "./core/slash-commands/sandbox.js";
 import { printTimings, resetTimings, time } from "./core/timings.js";
 import { allTools } from "./core/tools/index.js";
 import { runMigrations, showDeprecationWarnings } from "./migrations.js";
 import { InteractiveMode, runPrintMode, runRpcMode } from "./modes/index.js";
-import { HeadlessPromptUI } from "./core/permission-prompt-headless.js";
 import { ExtensionSelectorComponent } from "./modes/interactive/components/extension-selector.js";
 import { initTheme, setDetectedBackground, stopThemeWatcher } from "./modes/interactive/theme/theme.js";
 import { runOnboarding, shouldRunOnboarding } from "./onboarding/wizard.js";
@@ -394,6 +392,10 @@ function buildSessionOptions(
 		options.tools = parsed.tools.map((name) => allTools[name]);
 	}
 
+	if (parsed.maxTurns && parsed.maxTurns > 0) {
+		options.maxTurns = parsed.maxTurns;
+	}
+
 	return { options, cliThinkingFromModel, diagnostics };
 }
 
@@ -520,11 +522,6 @@ export async function main(args: string[]) {
 	}
 
 	if (await handleConfigCommand(args)) {
-		return;
-	}
-
-	// WS3: cave sandbox / cave debug sandbox / cave execpolicy check.
-	if (handleSandboxCommand(args)) {
 		return;
 	}
 
@@ -750,11 +747,6 @@ export async function main(args: string[]) {
 			scopedModels: sessionOptions.scopedModels,
 			tools: sessionOptions.tools,
 			customTools: sessionOptions.customTools,
-			// WS3: default to the non-blocking headless UI. Interactive mode
-			// upgrades to ApprovalPromptUI once the TUI is built (see
-			// modes/interactive/interactive-mode.ts).
-			permissionUI: new HeadlessPromptUI(),
-			permissionMode: parsed.permissionMode,
 		});
 		const cliThinkingOverride = parsed.thinking !== undefined || cliThinkingFromModel;
 		if (created.session.model && cliThinkingOverride) {
